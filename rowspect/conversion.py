@@ -52,23 +52,27 @@ def _missing_mask(series: pd.Series) -> pd.Series:
 def _convert_boolean(series: pd.Series) -> tuple[pd.Series, pd.Series]:
     truthy = {"true", "yes", "y", "1"}
     falsy = {"false", "no", "n", "0"}
-    missing = _missing_mask(series)
-    result = pd.Series(pd.NA, index=series.index, dtype="boolean")
-    invalid = pd.Series(False, index=series.index)
+    missing = _missing_mask(series).reset_index(drop=True)
+    values = series.reset_index(drop=True)
+    result = pd.Series(pd.NA, index=range(len(series)), dtype="boolean")
+    invalid = pd.Series(False, index=range(len(series)))
 
-    for index, value in series.items():
-        if missing.loc[index]:
+    for position, value in enumerate(values.tolist()):
+        if bool(missing.iloc[position]):
             continue
         if isinstance(value, bool):
-            result.loc[index] = value
+            result.iloc[position] = value
             continue
         token = str(value).strip().lower()
         if token in truthy:
-            result.loc[index] = True
+            result.iloc[position] = True
         elif token in falsy:
-            result.loc[index] = False
+            result.iloc[position] = False
         else:
-            invalid.loc[index] = True
+            invalid.iloc[position] = True
+
+    result.index = series.index
+    invalid.index = series.index
     return result, invalid
 
 
@@ -179,7 +183,7 @@ def apply_type_conversions(
             candidate = candidate.copy()
             candidate[invalid] = pd.NA
 
-        converted_df.iloc[:, position] = candidate
+        converted_df[plan["column"]] = candidate
         results.append({**plan, **analysis, "applied": True, "status": "applied"})
 
     return converted_df, results
