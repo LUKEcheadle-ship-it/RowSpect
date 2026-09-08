@@ -72,3 +72,30 @@ def test_invalid_excel_sheet_has_specific_error():
         pd.DataFrame({"a": [1]}).to_excel(writer, sheet_name="Only", index=False)
     with pytest.raises(RowSpectIOError, match="Worksheet 'Missing' was not found"):
         load_table(buffer.getvalue(), "sample.xlsx", sheet_name="Missing")
+
+
+def test_csv_duplicate_headers_are_preserved():
+    df = load_table(b"a,a\n1,2\n", "duplicate.csv")
+    assert list(df.columns) == ["a", "a"]
+
+
+def test_xlsx_duplicate_headers_are_preserved():
+    buffer = BytesIO()
+    pd.DataFrame([[1, 2]], columns=["a", "a"]).to_excel(buffer, index=False, engine="openpyxl")
+    df = load_table(buffer.getvalue(), "duplicate.xlsx")
+    assert list(df.columns) == ["a", "a"]
+
+
+def test_xlsx_archive_expansion_limit(monkeypatch):
+    import rowspect.io as io_module
+
+    buffer = BytesIO()
+    pd.DataFrame({"a": [1, 2]}).to_excel(buffer, index=False, engine="openpyxl")
+    monkeypatch.setattr(io_module, "MAX_XLSX_UNCOMPRESSED_BYTES", 10)
+    with pytest.raises(RowSpectIOError, match="expands beyond"):
+        load_table(buffer.getvalue(), "large.xlsx")
+
+
+def test_malformed_csv_quoting_has_clean_error():
+    with pytest.raises(RowSpectIOError, match="malformed quoting"):
+        load_table(b'a,b\n"1,2\n', "bad-quotes.csv")

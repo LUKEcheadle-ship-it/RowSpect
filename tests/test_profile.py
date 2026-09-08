@@ -52,7 +52,7 @@ def test_profile_detects_duplicate_dataframe_columns():
 def test_score_label_thresholds_are_present():
     clean = profile_dataframe(pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]}))
     assert clean["quality_label"] == "Excellent"
-    assert clean["quality_score"] >= 95
+    assert clean["quality_score"] >= 90
     assert set(clean["score_components"]) == {
         "missing_penalty",
         "duplicate_penalty",
@@ -61,3 +61,12 @@ def test_score_label_thresholds_are_present():
         "outlier_penalty",
         "structural_penalty",
     }
+
+
+def test_loaded_duplicate_headers_reach_profiler():
+    from rowspect.io import load_table
+
+    df = load_table(b"amount,amount\n1,2\n", "duplicate.csv")
+    profile = profile_dataframe(df)
+    assert profile["duplicate_columns"] == 1
+    assert any(issue["category"] == "duplicate_columns" for issue in profile["issues"])

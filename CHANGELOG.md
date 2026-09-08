@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.1.0
+
+Production-hardening release candidate.
+
+### Added
+- non-root Docker deployment with a Streamlit health check
+- Streamlit runtime safety configuration and 50 MB server upload limit
+- `rowspect --doctor` runtime diagnostics without host-identifying data
+- repeatable release qualification, live UI smoke, benchmark, and public-release audit scripts
+- deployment and release-checklist documentation
+- exact runtime dependency pins for the application deployment path
+- XLSX archive expansion and archive-entry safety limits
+- preservation of original CSV/XLSX headers so duplicate column names are detected in real uploaded files
+
+### Hardened
+- malformed CSV quote handling now fails with a clean user-facing error
+- invalid/encrypted/implausibly expanded XLSX containers fail before normal workbook parsing
+- package wheel build is part of the release qualification gate
+- public-release audit checks runtime code for unexpected network clients, common secret formats, machine-specific paths, and non-sample datasets
+
+### Qualification
+- 47 automated tests passing in the build environment
+- package wheel build passing
+- CLI/report smoke passing
+- public-release audit passing
+- 100,000-row x 20-column synthetic benchmark completed in under one second in the build environment
+- strict live Streamlit UI qualification remains required before public advertising
+
 ## 1.0.0
 
 RowSpect V1 is the first release candidate intended for public use.

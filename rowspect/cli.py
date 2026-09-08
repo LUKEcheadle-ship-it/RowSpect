@@ -5,9 +5,11 @@ import json
 import sys
 from pathlib import Path
 
+from rowspect import __version__
 from rowspect.io import RowSpectIOError, get_excel_sheets, load_table
 from rowspect.profile import profile_dataframe
 from rowspect.report import build_html_report
+from rowspect.runtime import runtime_diagnostics
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -15,8 +17,13 @@ def build_parser() -> argparse.ArgumentParser:
         prog="rowspect",
         description="Profile a local CSV or Excel file without uploading it anywhere.",
     )
-    parser.add_argument("--version", action="version", version="RowSpect 1.0.0")
-    parser.add_argument("path", type=Path, help="Path to a .csv or .xlsx file")
+    parser.add_argument("--version", action="version", version=f"RowSpect {__version__}")
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Check the local RowSpect runtime without reading a dataset",
+    )
+    parser.add_argument("path", nargs="?", type=Path, help="Path to a .csv or .xlsx file")
     parser.add_argument("--sheet", help="Excel worksheet name (defaults to the first sheet)")
     parser.add_argument("--json", dest="json_path", type=Path, help="Write the full JSON profile")
     parser.add_argument("--html", dest="html_path", type=Path, help="Write a standalone HTML report")
@@ -24,8 +31,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _run_doctor() -> int:
+    diagnostics = runtime_diagnostics()
+    print(f"RowSpect {__version__} runtime check")
+    print(f"python={diagnostics['python']} supported={str(diagnostics['python_supported']).lower()}")
+    for name, version in diagnostics["dependencies"].items():
+        print(f"{name}={version or 'missing'}")
+    print(f"healthy={str(diagnostics['healthy']).lower()}")
+    return 0 if diagnostics["healthy"] else 2
+
+
 def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.doctor:
+        return _run_doctor()
+    if args.path is None:
+        print("RowSpect: a dataset path is required unless --doctor is used.", file=sys.stderr)
+        return 2
+
     try:
         data = args.path.read_bytes()
     except OSError as exc:

@@ -4,7 +4,7 @@
 
 RowSpect turns a messy spreadsheet into an immediate, explainable quality review. Open a `.csv` or `.xlsx` file, inspect missing values, duplicates, suspicious types, constant columns, and potential numeric outliers, explore the data visually, then export a cleaned file or standalone report.
 
-RowSpect V1 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
+RowSpect 1.1 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
 
 ## Why this project
 
@@ -19,10 +19,38 @@ RowSpect demonstrates a complete small data product rather than a notebook-only 
 - unit-tested core logic
 - privacy-conscious local processing
 
+## Production hardening
+
+RowSpect 1.1 adds a repeatable release and deployment path rather than relying on a developer machine:
+
+- non-root Docker image with an HTTP health check
+- Streamlit XSRF/CORS protections left enabled
+- 50 MB upload limit enforced by both Streamlit configuration and RowSpect validation
+- 250 MB maximum uncompressed XLSX size and 10,000 archive-entry limit
+- real duplicate CSV/XLSX headers preserved and surfaced as structural issues
+- formula-like spreadsheet text neutralized on export by default
+- `rowspect --doctor` dependency/runtime check
+- package wheel build, CLI smoke, public-release audit, and automated tests in one qualification command
+- strict live Streamlit server smoke available before release
+
+Run the non-UI qualification gate with:
+
+```bash
+python scripts/qualify_release.py
+```
+
+The final release gate is stricter:
+
+```bash
+python scripts/qualify_release.py --require-ui
+```
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
+
 ## V1 features
 
 - CSV and Excel (`.xlsx`) input, including multi-sheet workbooks
-- 50 MB V1 file-size guard
+- 50 MB upload guard plus XLSX archive-expansion limits
 - delimiter detection for comma, semicolon, tab, and pipe-delimited CSVs
 - UTF-8, UTF-8 BOM, and Latin-1 CSV handling
 - 0–100 quality score with visible deductions
@@ -141,7 +169,10 @@ rowspect/
   io.py                 defensive CSV/XLSX loading
   profile.py            deterministic profiler and score
   report.py             standalone HTML report
+  runtime.py            non-identifying runtime diagnostics
 sample_data/            synthetic messy example
+scripts/                qualification, smoke, audit, and benchmark tools
+docs/                   deployment and release guidance
 tests/                  automated core tests
 ```
 
