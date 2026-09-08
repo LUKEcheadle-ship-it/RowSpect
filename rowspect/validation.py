@@ -175,10 +175,9 @@ def _evaluate_rule(series: pd.Series, rule: dict[str, Any]) -> pd.Series:
         return ((~missing) & ~series.isin(rule["values"])).fillna(False)
 
     if rule_type == "regex":
-        compiled = re.compile(rule["pattern"])
-        return ((~missing) & ~series.map(
-            lambda value: bool(compiled.fullmatch(str(value))) if not pd.isna(value) else True
-        )).fillna(False)
+        text = series.astype("string")
+        matches = text.str.fullmatch(rule["pattern"], na=True)
+        return ((~missing) & ~matches).fillna(False)
 
     if rule_type == "date":
         non_missing = ~missing
