@@ -1,22 +1,23 @@
 # Contributing to RowSpect
 
-RowSpect aims to stay small, deterministic, and easy to inspect.
+RowSpect is intentionally small. Contributions should improve data-quality usefulness without turning the project into a hosted data platform.
 
-## Local setup
+## Development
 
 ```bash
 python -m venv .venv
+# activate the environment
 pip install -e ".[dev]"
 pytest
 streamlit run app.py
 ```
 
-## Good contribution areas
+## Pull requests
 
-- new deterministic data-quality checks with tests
-- CSV/XLSX parsing edge cases
-- accessibility and UI improvements
-- sample datasets that contain no private or licensed data
-- report formatting improvements
+Please include:
+- a short description of the user-facing change
+- tests for new deterministic analysis or export behavior
+- no real customer, employer, school, or private datasets
+- no telemetry, analytics SDKs, tracking pixels, or silent network calls
 
-Please avoid adding telemetry, cloud uploads, secrets, proprietary datasets, or automatic destructive data transformations.
+Prefer small changes that are easy to review and reproduce.
