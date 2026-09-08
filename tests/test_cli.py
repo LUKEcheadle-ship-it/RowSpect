@@ -20,3 +20,11 @@ def test_cli_missing_file_returns_2(tmp_path, capsys):
     code = run([str(tmp_path / "missing.csv")])
     assert code == 2
     assert "could not read" in capsys.readouterr().err
+
+
+def test_cli_export_write_error_returns_2(tmp_path, capsys):
+    source = tmp_path / "sample.csv"
+    source.write_text("a\n1\n", encoding="utf-8")
+    code = run([str(source), "--json", str(tmp_path / "missing-dir" / "out.json")])
+    assert code == 2
+    assert "could not write" in capsys.readouterr().err
