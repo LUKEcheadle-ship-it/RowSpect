@@ -19,6 +19,8 @@ def test_production_files_exist():
         ".streamlit/config.toml",
         "docs/DEPLOYMENT.md",
         "docs/RELEASE_CHECKLIST.md",
+        "docs/RULE_PROFILES.md",
+        "sample_data/customer_rules.json",
         "scripts/qualify_release.py",
         "scripts/smoke_streamlit.py",
         "scripts/audit_public_release.py",
