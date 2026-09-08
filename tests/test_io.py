@@ -64,3 +64,11 @@ def test_header_only_csv_loads_and_profiles_later():
 def test_malformed_csv_has_clean_error():
     with pytest.raises(RowSpectIOError, match="inconsistent|malformed"):
         load_table(b"a,b\n1,2,3\n", "bad.csv")
+
+
+def test_invalid_excel_sheet_has_specific_error():
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        pd.DataFrame({"a": [1]}).to_excel(writer, sheet_name="Only", index=False)
+    with pytest.raises(RowSpectIOError, match="Worksheet 'Missing' was not found"):
+        load_table(buffer.getvalue(), "sample.xlsx", sheet_name="Missing")
