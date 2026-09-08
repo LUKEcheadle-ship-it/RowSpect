@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rowspect"
-version = "0.1.0"
+version = "1.0.0"
 description = "Local-first data quality profiling for CSV and Excel files."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,6 +17,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
+
+[project.scripts]
+rowspect = "rowspect.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["rowspect*"]
