@@ -85,6 +85,9 @@ def run(argv: list[str] | None = None) -> int:
     if args.apply_profile_conversions and not args.rules_profile:
         print("RowSpect: --apply-profile-conversions requires --rules-profile.", file=sys.stderr)
         return 2
+    if args.fail_on_validation and not args.rules_profile:
+        print("RowSpect: --fail-on-validation requires --rules-profile.", file=sys.stderr)
+        return 2
 
     try:
         data = args.path.read_bytes()
