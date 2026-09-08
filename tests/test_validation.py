@@ -57,6 +57,13 @@ def test_range_rule_requires_a_bound_and_regex_must_compile():
         normalize_rule({"type": "regex", "column": "email", "pattern": "["})
 
 
+def test_numeric_values_do_not_pass_date_rule_as_unix_epoch_nanoseconds():
+    df = pd.DataFrame({"joined": [20260101, 20260102]})
+    result = validate_dataframe(df, [{"type": "date", "column": "joined"}])
+    assert result["results"][0]["violation_count"] == 2
+    assert result["validation_passed"] is False
+
+
 def test_validation_passes_clean_dataset():
     df = pd.DataFrame({"id": [1, 2], "state": ["AL", "GA"]})
     result = validate_dataframe(
