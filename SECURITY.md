@@ -2,6 +2,8 @@
 
 RowSpect is a local data-quality utility, not a sandbox for hostile files.
 
+For the public-release assessment and accepted residual risks, see [`docs/SAFETY_REVIEW.md`](docs/SAFETY_REVIEW.md).
+
 ## Supported files
 
 RowSpect accepts `.csv` and `.xlsx` files up to 50 MB. Files are parsed by pandas/openpyxl in the running Python process. Do not open untrusted files with RowSpect on a machine where parsing third-party documents is prohibited by policy.
