@@ -10,6 +10,14 @@ V1 accepts `.csv` and `.xlsx` files up to 50 MB. Files are parsed by pandas/open
 
 RowSpect has no project-operated upload service, account system, telemetry integration, or analytics SDK. The Streamlit app processes the selected file in the process where the app is running. If you expose Streamlit on a network interface, that deployment's access controls become your responsibility.
 
+## Workbook resource limits
+
+In addition to the 50 MB upload limit, RowSpect inspects the XLSX ZIP container before normal workbook parsing. V1.1 rejects workbooks that expand beyond 250 MB, contain more than 10,000 archive entries, are encrypted, or do not contain the core XLSX workbook structures. These checks reduce resource-exhaustion risk but do not make RowSpect a malware sandbox.
+
+## Runtime network boundary
+
+The RowSpect application and `rowspect` package do not require a network client to profile files. The release audit checks the runtime source for common outbound-network client imports. Deployment tooling may make loopback HTTP requests only for health/smoke verification.
+
 ## Spreadsheet formula safety
 
 Downloaded CSV/XLSX files neutralize text beginning with common spreadsheet formula prefixes (`=`, `+`, `-`, `@`) by default. Users may explicitly disable this when exact text preservation is required.

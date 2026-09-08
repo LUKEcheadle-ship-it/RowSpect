@@ -21,3 +21,13 @@ Please include:
 - no telemetry, analytics SDKs, tracking pixels, or silent network calls
 
 Prefer small changes that are easy to review and reproduce.
+
+## Before opening a pull request
+
+Run:
+
+```bash
+python scripts/qualify_release.py
+```
+
+Changes to the Streamlit UI or deployment path should also pass `python scripts/qualify_release.py --require-ui` in an environment with the runtime dependencies installed.

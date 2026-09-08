@@ -28,3 +28,27 @@ def test_cli_export_write_error_returns_2(tmp_path, capsys):
     code = run([str(source), "--json", str(tmp_path / "missing-dir" / "out.json")])
     assert code == 2
     assert "could not write" in capsys.readouterr().err
+
+
+def test_cli_doctor_healthy(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "rowspect.cli.runtime_diagnostics",
+        lambda: {
+            "python": "3.12.0",
+            "python_supported": True,
+            "dependencies": {"pandas": "2.2.3", "openpyxl": "3.1.5", "streamlit": "1.63.0"},
+            "dependencies_available": True,
+            "healthy": True,
+        },
+    )
+    code = run(["--doctor"])
+    assert code == 0
+    output = capsys.readouterr().out
+    assert "runtime check" in output
+    assert "healthy=true" in output
+
+
+def test_cli_requires_path_without_doctor(capsys):
+    code = run([])
+    assert code == 2
+    assert "dataset path is required" in capsys.readouterr().err
