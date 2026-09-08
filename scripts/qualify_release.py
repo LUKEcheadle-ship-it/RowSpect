@@ -27,7 +27,10 @@ def main() -> int:
     args = parser.parse_args()
 
     _run("compile", [sys.executable, "-m", "compileall", "-q", "app.py", "rowspect", "scripts"])
-    _run("tests", [sys.executable, "-m", "pytest", "-q"])
+    # Keep pytest fixtures isolated from stale or inaccessible system temp
+    # directories on developer and CI hosts.
+    with tempfile.TemporaryDirectory(prefix="rowspect-pytest-") as pytest_temp:
+        _run("tests", [sys.executable, "-m", "pytest", "-q", "--basetemp", pytest_temp])
     _run("public audit", [sys.executable, "scripts/audit_public_release.py"])
 
     with tempfile.TemporaryDirectory(prefix="rowspect-release-") as temp_dir:
