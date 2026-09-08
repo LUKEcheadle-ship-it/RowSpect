@@ -15,6 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="rowspect",
         description="Profile a local CSV or Excel file without uploading it anywhere.",
     )
+    parser.add_argument("--version", action="version", version="RowSpect 1.0.0")
     parser.add_argument("path", type=Path, help="Path to a .csv or .xlsx file")
     parser.add_argument("--sheet", help="Excel worksheet name (defaults to the first sheet)")
     parser.add_argument("--json", dest="json_path", type=Path, help="Write the full JSON profile")
@@ -56,10 +57,14 @@ def run(argv: list[str] | None = None) -> int:
         f"info={profile['info_count']} missing={profile['missing_pct']}% duplicates={profile['duplicate_rows']}"
     )
 
-    if args.json_path:
-        args.json_path.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
-    if args.html_path:
-        args.html_path.write_text(build_html_report(profile, args.path.name), encoding="utf-8")
+    try:
+        if args.json_path:
+            args.json_path.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+        if args.html_path:
+            args.html_path.write_text(build_html_report(profile, args.path.name), encoding="utf-8")
+    except OSError as exc:
+        print(f"RowSpect: could not write an export file: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 
