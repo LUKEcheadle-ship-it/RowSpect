@@ -12,6 +12,7 @@ from rowspect.insights import correlation_matrix, missingness_table, numeric_his
 from rowspect.io import MAX_FILE_BYTES, RowSpectIOError, get_excel_sheets, load_table
 from rowspect.profile import profile_dataframe
 from rowspect.report import build_html_report
+from rowspect.ui import display_dataframe
 
 st.set_page_config(page_title="RowSpect", page_icon="🔎", layout="wide")
 
@@ -131,7 +132,7 @@ with overview_tab:
     left, right = st.columns([1.45, 0.55])
     with left:
         st.subheader("Data preview")
-        st.dataframe(dataframe.head(100), use_container_width=True, height=390)
+        st.dataframe(display_dataframe(dataframe.head(100)), use_container_width=True, height=390)
         st.caption("Showing up to the first 100 rows. RowSpect analyzes the complete loaded sheet.")
     with right:
         st.subheader("Issue mix")
@@ -229,7 +230,7 @@ with explore_tab:
         corr = correlation_matrix(dataframe)
         if not corr.empty:
             st.subheader("Numeric correlation")
-            st.dataframe(corr, use_container_width=True)
+            st.dataframe(display_dataframe(corr), use_container_width=True)
             st.caption("Pearson correlation for up to the first 20 numeric columns.")
     else:
         st.info("No numeric columns are available for distribution or correlation analysis.")
@@ -275,7 +276,7 @@ with clean_tab:
     summary_cols[1].metric("Duplicates remaining", summary["duplicates_after"])
     summary_cols[2].metric("Blank strings before", summary["blank_strings_before"])
     summary_cols[3].metric("Blank strings after", summary["blank_strings_after"])
-    st.dataframe(cleaned.head(100), use_container_width=True, height=390)
+    st.dataframe(display_dataframe(cleaned.head(100)), use_container_width=True, height=390)
 
     dl1, dl2 = st.columns(2)
     with dl1:

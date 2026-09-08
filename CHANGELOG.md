@@ -21,12 +21,13 @@ Production-hardening release candidate.
 - public-release audit checks runtime code for unexpected network clients, common secret formats, machine-specific paths, and non-sample datasets
 
 ### Qualification
-- 47 automated tests passing in the build environment
+- 60 automated tests passing in the qualification environment
 - package wheel build passing
 - CLI/report smoke passing
 - public-release audit passing
-- 100,000-row x 20-column synthetic benchmark completed in under one second in the build environment
-- strict live Streamlit UI qualification remains required before public advertising
+- 100,000-row x 20-column synthetic benchmark completed in 1.670 seconds in the qualification environment
+- strict live Streamlit UI qualification passing on loopback
+- Docker qualification remains environment-dependent and was unavailable on the qualification host
 
 ## 1.0.0
 

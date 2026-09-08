@@ -52,7 +52,9 @@ def _detect_delimiter(text: str) -> str:
 def _csv_header_and_width(text: str, delimiter: str) -> tuple[list[str], int]:
     reader = csv.reader(StringIO(text), delimiter=delimiter, strict=True)
     for row in reader:
-        if row and any(cell != "" for cell in row):
+        # A multi-column row containing only blanks is still a real header row.
+        # Preserve it so blank-header quality issues are not hidden by pandas.
+        if row and (any(cell != "" for cell in row) or len(row) > 1):
             return row, len(row)
     raise RowSpectIOError("The CSV does not contain a readable header.")
 
@@ -62,10 +64,14 @@ def _validate_csv_structure(text: str, delimiter: str) -> list[str]:
     reader = csv.reader(StringIO(text), delimiter=delimiter, strict=True)
     header_seen = False
     for row_number, row in enumerate(reader, start=1):
-        if not row or all(cell == "" for cell in row):
-            continue
         if not header_seen:
+            # Ignore leading blank lines, but accept a structurally valid blank
+            # multi-column header identified by _csv_header_and_width.
+            if not row or (all(cell == "" for cell in row) and len(row) == 1):
+                continue
             header_seen = True
+            continue
+        if not row or all(cell == "" for cell in row):
             continue
         if len(row) != expected_width:
             raise RowSpectIOError(

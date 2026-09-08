@@ -36,7 +36,7 @@ def main() -> int:
         wheel_dir.mkdir()
         _run(
             "wheel build",
-            [sys.executable, "-m", "pip", "wheel", "--no-deps", "--no-build-isolation", ".", "-w", str(wheel_dir)],
+            [sys.executable, "-m", "pip", "wheel", "--no-deps", ".", "-w", str(wheel_dir)],
         )
         wheels = list(wheel_dir.glob("rowspect-*.whl"))
         if len(wheels) != 1:
