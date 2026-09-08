@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.2.0
+
+Extended data-validation and safe-conversion release candidate.
+
+### Added
+- reusable JSON rule profiles containing validation rules and optional explicit conversion plans
+- required-field validation
+- uniqueness validation
+- numeric minimum/maximum range validation
+- allowed-value validation
+- full-match regular-expression validation
+- date validation with optional explicit date format
+- row-level violation reporting using spreadsheet-style row numbers
+- strict type-conversion previews for text, integer, float, boolean, date, and datetime targets
+- downloadable converted CSV/XLSX working copies when every planned conversion is safe
+- validation/conversion profile editor in the Streamlit UI
+- reusable profile upload/download in the Streamlit UI
+- CLI `--rules-profile`, `--validation-json`, `--apply-profile-conversions`, and `--fail-on-validation` options
+
+### Safety
+- conversions remain explicit and strict by default; a target conversion is blocked if any non-empty value is incompatible
+- reusable profiles contain rule/configuration metadata only, not source dataset rows
+- rules targeting missing or duplicate/ambiguous column names report configuration errors rather than guessing
+- original uploaded data remains unchanged; conversion and cleanup operate on working copies
+
+### Qualification
+- full 1.2 production qualification must be rerun before public release because the UI and CLI surface changed
+
 ## 1.1.0
 
 Production-hardening release candidate.
