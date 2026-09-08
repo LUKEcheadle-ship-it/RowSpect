@@ -87,7 +87,10 @@ def load_table(data: bytes, filename: str, sheet_name: str | None = None) -> pd.
             _validate_csv_structure(text, delimiter)
             df = pd.read_csv(StringIO(text), sep=delimiter)
         else:
-            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl")
+            workbook = pd.ExcelFile(BytesIO(data), engine="openpyxl")
+            if sheet_name is not None and sheet_name not in workbook.sheet_names:
+                raise RowSpectIOError(f"Worksheet '{sheet_name}' was not found in this workbook.")
+            df = pd.read_excel(workbook, sheet_name=sheet_name or 0)
     except PandasEmptyDataError as exc:
         raise RowSpectIOError("The file does not contain a readable header or data rows.") from exc
     except ParserError as exc:
