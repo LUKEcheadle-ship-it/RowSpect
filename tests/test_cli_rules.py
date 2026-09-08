@@ -86,9 +86,14 @@ def test_cli_profile_conversions_are_opt_in_and_strict(tmp_path, capsys):
     assert "conversion" in capsys.readouterr().err.lower()
 
 
-def test_cli_validation_json_requires_profile(tmp_path, capsys):
+def test_cli_validation_only_flags_require_profile(tmp_path, capsys):
     source = tmp_path / "sample.csv"
     source.write_text("a\n1\n", encoding="utf-8")
+
     code = run([str(source), "--validation-json", str(tmp_path / "validation.json")])
+    assert code == 2
+    assert "requires --rules-profile" in capsys.readouterr().err
+
+    code = run([str(source), "--fail-on-validation"])
     assert code == 2
     assert "requires --rules-profile" in capsys.readouterr().err
