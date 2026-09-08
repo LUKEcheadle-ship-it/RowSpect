@@ -49,3 +49,16 @@ def test_dockerfile_runs_as_non_root_and_has_healthcheck():
     assert "USER rowspect" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert "_stcore/health" in dockerfile
+
+
+def test_ui_display_copy_disambiguates_headers_without_mutating_source():
+    import pandas as pd
+
+    from rowspect.ui import display_dataframe
+
+    source = pd.DataFrame([[1, 2, 3], ["text", 4, 5]], columns=["dup", "dup", ""])
+    displayed = display_dataframe(source)
+
+    assert list(source.columns) == ["dup", "dup", ""]
+    assert list(displayed.columns) == ["dup", "dup [2]", "Unnamed column 3"]
+    assert displayed.iloc[:, 0].tolist() == ["1", "text"]

@@ -4,7 +4,7 @@
 
 RowSpect turns a messy spreadsheet into an immediate, explainable quality review. Open a `.csv` or `.xlsx` file, inspect missing values, duplicates, suspicious types, constant columns, and potential numeric outliers, explore the data visually, then export a cleaned file or standalone report.
 
-RowSpect 1.1 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
+RowSpect 1.1.0 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
 
 ## Why this project
 
