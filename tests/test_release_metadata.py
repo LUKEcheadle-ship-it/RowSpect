@@ -56,8 +56,9 @@ def test_ui_display_copy_disambiguates_headers_without_mutating_source():
 
     from rowspect.ui import display_dataframe
 
-    source = pd.DataFrame([[1, 2, 3]], columns=["dup", "dup", ""])
+    source = pd.DataFrame([[1, 2, 3], ["text", 4, 5]], columns=["dup", "dup", ""])
     displayed = display_dataframe(source)
 
     assert list(source.columns) == ["dup", "dup", ""]
     assert list(displayed.columns) == ["dup", "dup [2]", "Unnamed column 3"]
+    assert displayed.iloc[:, 0].tolist() == ["1", "text"]

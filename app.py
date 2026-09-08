@@ -132,7 +132,7 @@ with overview_tab:
     left, right = st.columns([1.45, 0.55])
     with left:
         st.subheader("Data preview")
-        st.dataframe(display_dataframe(dataframe.head(100)), use_container_width=True, height=390)
+        st.dataframe(display_dataframe(dataframe.head(100)), width="stretch", height=390)
         st.caption("Showing up to the first 100 rows. RowSpect analyzes the complete loaded sheet.")
     with right:
         st.subheader("Issue mix")
@@ -159,7 +159,7 @@ with overview_tab:
                 for key, value in profile["score_components"].items()
             ]
         )
-        st.dataframe(component_df, hide_index=True, use_container_width=True)
+        st.dataframe(display_dataframe(component_df), hide_index=True, width="stretch")
 
 with issues_tab:
     st.subheader("Detected review signals")
@@ -167,7 +167,7 @@ with issues_tab:
     selected = st.multiselect("Show severities", severities, default=severities)
     visible = [issue for issue in profile["issues"] if issue["severity"] in selected]
     if visible:
-        st.dataframe(pd.DataFrame(visible), use_container_width=True, hide_index=True)
+        st.dataframe(display_dataframe(pd.DataFrame(visible)), width="stretch", hide_index=True)
     else:
         st.success("No issues match the selected severity filters.")
     st.caption("Potential outliers and inferred type hints are review signals, not automatic errors.")
@@ -175,7 +175,7 @@ with issues_tab:
 with columns_tab:
     st.subheader("Column profile")
     column_profile = pd.DataFrame(profile["columns"])
-    st.dataframe(column_profile, use_container_width=True, hide_index=True, height=460)
+    st.dataframe(display_dataframe(column_profile), width="stretch", hide_index=True, height=460)
 
     if profile["columns"]:
         column_positions = list(range(len(profile["columns"])))
@@ -230,7 +230,7 @@ with explore_tab:
         corr = correlation_matrix(dataframe)
         if not corr.empty:
             st.subheader("Numeric correlation")
-            st.dataframe(display_dataframe(corr), use_container_width=True)
+            st.dataframe(display_dataframe(corr), width="stretch")
             st.caption("Pearson correlation for up to the first 20 numeric columns.")
     else:
         st.info("No numeric columns are available for distribution or correlation analysis.")
@@ -276,7 +276,7 @@ with clean_tab:
     summary_cols[1].metric("Duplicates remaining", summary["duplicates_after"])
     summary_cols[2].metric("Blank strings before", summary["blank_strings_before"])
     summary_cols[3].metric("Blank strings after", summary["blank_strings_after"])
-    st.dataframe(display_dataframe(cleaned.head(100)), use_container_width=True, height=390)
+    st.dataframe(display_dataframe(cleaned.head(100)), width="stretch", height=390)
 
     dl1, dl2 = st.columns(2)
     with dl1:
@@ -285,7 +285,7 @@ with clean_tab:
             data=dataframe_to_csv(cleaned, neutralize_formulas=neutralize_formulas),
             file_name=f"{Path(source_name).stem}-rowspect-clean.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
     with dl2:
         st.download_button(
@@ -293,7 +293,7 @@ with clean_tab:
             data=dataframe_to_xlsx(cleaned, neutralize_formulas=neutralize_formulas),
             file_name=f"{Path(source_name).stem}-rowspect-clean.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width="stretch",
         )
 
 with export_tab:
@@ -306,7 +306,7 @@ with export_tab:
             data=report_html.encode("utf-8"),
             file_name=f"{Path(source_name).stem}-rowspect-report.html",
             mime="text/html",
-            use_container_width=True,
+            width="stretch",
         )
     with ex2:
         st.download_button(
@@ -314,6 +314,6 @@ with export_tab:
             data=json.dumps(profile, indent=2, ensure_ascii=False).encode("utf-8"),
             file_name=f"{Path(source_name).stem}-rowspect-profile.json",
             mime="application/json",
-            use_container_width=True,
+            width="stretch",
         )
     st.caption("The exported profile contains aggregate quality results and column statistics, not the full source dataset.")

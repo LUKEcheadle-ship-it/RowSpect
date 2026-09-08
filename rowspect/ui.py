@@ -10,7 +10,7 @@ def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     source headers remain visible to the profiler and exports. Only the copy used
     by the UI gets deterministic suffixes for ambiguous labels.
     """
-    display = df.copy(deep=False)
+    display = df.copy(deep=True)
     seen: set[str] = set()
     counts: dict[str, int] = {}
     labels: list[str] = []
@@ -26,4 +26,19 @@ def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         labels.append(label)
 
     display.columns = labels
+
+    # Arrow requires a consistent type for each column. Profile tables can
+    # legitimately contain numeric and text top values in the same object
+    # column, so stringify object-like values only in this display copy.
+    for position in range(display.shape[1]):
+        series = display.iloc[:, position]
+        if not (
+            pd.api.types.is_object_dtype(series.dtype)
+            or pd.api.types.is_string_dtype(series.dtype)
+            or isinstance(series.dtype, pd.CategoricalDtype)
+        ):
+            continue
+        display.iloc[:, position] = series.map(
+            lambda value: None if pd.isna(value) else str(value)
+        )
     return display
