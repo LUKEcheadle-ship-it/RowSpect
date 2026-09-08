@@ -39,6 +39,9 @@ def normalize_conversions(plans: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ids = [plan["id"] for plan in normalized]
     if len(ids) != len(set(ids)):
         raise ConversionError("Conversion ids must be unique within a profile.")
+    columns = [plan["column"] for plan in normalized]
+    if len(columns) != len(set(columns)):
+        raise ConversionError("A profile may define only one conversion per column.")
     return normalized
 
 
@@ -100,6 +103,12 @@ def _conversion_candidate(series: pd.Series, target_type: str) -> tuple[pd.Serie
         return _convert_boolean(series)
 
     if target_type in {"date", "datetime"}:
+        # pandas interprets plain numeric values as nanoseconds from the Unix epoch.
+        # That is technically parseable but is not a safe implicit spreadsheet date
+        # conversion, so numeric source columns are blocked unless already datetime.
+        if pd.api.types.is_numeric_dtype(series.dtype) and not pd.api.types.is_datetime64_any_dtype(series.dtype):
+            parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+            return parsed, non_missing.copy()
         parsed = pd.to_datetime(series.where(non_missing), errors="coerce")
         invalid = non_missing & parsed.isna()
         if target_type == "date":
