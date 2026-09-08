@@ -121,11 +121,14 @@ def analyze_type_conversion(series: pd.Series, target_type: str, *, max_examples
     convertible_count = max(non_missing_count - failure_count, 0)
     failure_examples = [str(value) for value in series[invalid].head(max_examples).tolist()]
 
+    dtype_changed = str(series.dtype) != str(converted.dtype)
     changed_count = 0
     for original, new in zip(series.tolist(), converted.tolist()):
-        if pd.isna(original) and pd.isna(new):
+        original_missing = bool(pd.isna(original))
+        new_missing = bool(pd.isna(new))
+        if original_missing and new_missing:
             continue
-        if str(original) != str(new):
+        if dtype_changed or str(original) != str(new):
             changed_count += 1
 
     return {
