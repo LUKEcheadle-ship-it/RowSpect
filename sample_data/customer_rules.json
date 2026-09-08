@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "name": "Customer import checks",
+  "description": "Synthetic example profile for the bundled messy customer dataset.",
+  "rules": [
+    {
+      "id": "customer-id-unique",
+      "type": "unique",
+      "column": "customer_id",
+      "severity": "critical"
+    },
+    {
+      "id": "email-required",
+      "type": "required",
+      "column": "email",
+      "severity": "warning"
+    },
+    {
+      "id": "age-range",
+      "type": "range",
+      "column": "age",
+      "severity": "warning",
+      "min": 18,
+      "max": 100
+    },
+    {
+      "id": "region-values",
+      "type": "allowed_values",
+      "column": "region",
+      "severity": "warning",
+      "values": ["South", "East", "West"]
+    },
+    {
+      "id": "signup-date",
+      "type": "date",
+      "column": "signup_date",
+      "severity": "warning",
+      "format": "%Y-%m-%d"
+    }
+  ],
+  "conversions": [
+    {
+      "id": "age-integer",
+      "column": "age",
+      "target_type": "integer"
+    },
+    {
+      "id": "signup-datetime",
+      "column": "signup_date",
+      "target_type": "date"
+    }
+  ]
+}

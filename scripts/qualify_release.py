@@ -44,6 +44,7 @@ def main() -> int:
         wheels = list(wheel_dir.glob("rowspect-*.whl"))
         if len(wheels) != 1:
             raise SystemExit("Release qualification failed: expected exactly one RowSpect wheel.")
+
         json_path = temp / "profile.json"
         html_path = temp / "report.html"
         _run(
@@ -64,6 +65,29 @@ def main() -> int:
             raise SystemExit("Release qualification failed: sample profile shape changed unexpectedly.")
         if "RowSpect data quality report" not in html_path.read_text(encoding="utf-8"):
             raise SystemExit("Release qualification failed: HTML report smoke check failed.")
+
+        validation_path = temp / "validation.json"
+        _run(
+            "rules profile smoke",
+            [
+                sys.executable,
+                "-m",
+                "rowspect.cli",
+                "sample_data/messy_customers.csv",
+                "--rules-profile",
+                "sample_data/customer_rules.json",
+                "--validation-json",
+                str(validation_path),
+                "--apply-profile-conversions",
+            ],
+        )
+        validation = json.loads(validation_path.read_text(encoding="utf-8"))
+        if validation.get("rule_count") != 5:
+            raise SystemExit("Release qualification failed: reusable rule profile did not load five rules.")
+        if validation.get("failing_rule_count", 0) < 1:
+            raise SystemExit("Release qualification failed: bundled messy sample unexpectedly passed all custom rules.")
+        if validation.get("violation_count", 0) < 1:
+            raise SystemExit("Release qualification failed: bundled messy sample produced no validation violations.")
 
     try:
         import streamlit  # noqa: F401
