@@ -1,6 +1,11 @@
 import pandas as pd
 
-from rowspect.ui import display_dataframe
+from rowspect.ui import column_display_label, display_dataframe
+
+
+def test_column_display_label_preserves_numeric_zero_header():
+    assert column_display_label(0, 1) == "0"
+    assert column_display_label("", 2) == "Unnamed column 2"
 
 
 def test_display_dataframe_handles_lists_and_dicts_for_rule_tables():

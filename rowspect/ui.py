@@ -16,6 +16,12 @@ def _display_value(value: Any) -> str | None:
     return str(value)
 
 
+def column_display_label(value: Any, position: int) -> str:
+    """Return a stable, human-readable label for a source column."""
+    text = str(value)
+    return text.strip() or f"Unnamed column {position}"
+
+
 def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Return a display-only copy with labels Streamlit/Arrow can render safely.
 

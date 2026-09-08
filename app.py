@@ -25,7 +25,7 @@ from rowspect.rule_profiles import (
     dump_rule_profile,
     load_rule_profile,
 )
-from rowspect.ui import display_dataframe
+from rowspect.ui import column_display_label, display_dataframe
 from rowspect.validation import ValidationRuleError, normalize_rule, validate_dataframe
 
 st.set_page_config(page_title="RowSpect", page_icon="🔎", layout="wide")
@@ -310,7 +310,7 @@ with validate_tab:
             "Column",
             list(range(dataframe.shape[1])),
             key="rule_column_position",
-            format_func=lambda idx: f"{idx + 1} · {dataframe.columns[idx] or 'Unnamed'}",
+            format_func=lambda idx: f"{idx + 1} · {column_display_label(dataframe.columns[idx], idx + 1)}",
         )
     with rule_columns[2]:
         rule_severity = st.selectbox("Severity", ["warning", "critical", "info"])
@@ -454,7 +454,7 @@ with convert_tab:
             "Column to convert",
             list(range(dataframe.shape[1])),
             key="conversion_column_position",
-            format_func=lambda idx: f"{idx + 1} · {dataframe.columns[idx] or 'Unnamed'}",
+            format_func=lambda idx: f"{idx + 1} · {column_display_label(dataframe.columns[idx], idx + 1)}",
         )
     with conversion_columns[1]:
         target_type = st.selectbox(
