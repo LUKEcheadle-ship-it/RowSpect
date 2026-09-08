@@ -181,6 +181,8 @@ def _evaluate_rule(series: pd.Series, rule: dict[str, Any]) -> pd.Series:
 
     if rule_type == "date":
         non_missing = ~missing
+        if pd.api.types.is_numeric_dtype(series.dtype) and not pd.api.types.is_datetime64_any_dtype(series.dtype):
+            return non_missing
         date_format = rule.get("format")
         parsed = pd.to_datetime(series.where(non_missing), format=date_format, errors="coerce")
         return (non_missing & parsed.isna()).fillna(False)
