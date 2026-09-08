@@ -1,6 +1,19 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
+
+
+def _display_value(value: Any) -> str | None:
+    """Convert arbitrary cell values into Arrow-safe display text."""
+    try:
+        missing = pd.isna(value)
+    except (TypeError, ValueError):
+        missing = False
+    if isinstance(missing, bool) and missing:
+        return None
+    return str(value)
 
 
 def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -27,8 +40,8 @@ def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     display.columns = labels
 
-    # Arrow requires a consistent type for each column. Profile tables can
-    # legitimately contain numeric and text top values in the same object
+    # Arrow requires a consistent type for each column. Profile/rule tables can
+    # legitimately contain numeric, text, list, and dict values in one object
     # column, so stringify object-like values only in this display copy.
     for position in range(display.shape[1]):
         series = display.iloc[:, position]
@@ -38,7 +51,5 @@ def display_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             or isinstance(series.dtype, pd.CategoricalDtype)
         ):
             continue
-        display.iloc[:, position] = series.map(
-            lambda value: None if pd.isna(value) else str(value)
-        )
+        display.iloc[:, position] = series.map(_display_value)
     return display
