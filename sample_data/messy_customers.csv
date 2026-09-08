@@ -1,0 +1,11 @@
+customer_id,name,email,age,annual_spend,signup_date,region
+1001,Alice Chen,alice@example.com,31,120.50,2026-01-12,South
+1002,Bob Smith,,42,89.00,2026-02-03,South
+1003,  Carla Jones  ,carla@example.com,27,175.25,2026-02-15,East
+1004,David Lee,david@example.com,,140.00,2026-03-01,West
+1005,Evan Brooks,evan@example.com,35,9999.00,2026-03-05,South
+1006,   ,fran@example.com,29,110.75,2026-03-14,East
+1007,Gina Hall,gina@example.com,44,205.10,2026-04-02,West
+1007,Gina Hall,gina@example.com,44,205.10,2026-04-02,West
+1008,Hector Ruiz,hector@example.com,38,,2026-04-19,South
+1009,Ivy Martin,ivy@example.com,33,132.20,2026-05-07,East
