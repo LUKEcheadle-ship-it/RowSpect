@@ -1,42 +1,71 @@
 # RowSpect
 
-**Know what is wrong with a spreadsheet before it reaches a dashboard, model, or report.**
+**Catch spreadsheet problems before they reach a dashboard, model, report, or decision.**
 
-RowSpect is a local-first data quality tool for CSV and Excel files. Drop in a spreadsheet, get an explainable quality review, define reusable business rules, preview safe type conversions, clean common problems, and export the result — without sending the dataset to a RowSpect cloud service.
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Local-first](https://img.shields.io/badge/processing-local--first-6f42c1)](#privacy-and-safety)
+[![Release qualification](https://img.shields.io/badge/tests-82%2F82%20passing-brightgreen)](#release-qualification)
 
-> RowSpect 1.2.0 is deliberately small and local: no account system, no project-operated upload backend, no telemetry, no analytics SDK, and no AI API.
+**RowSpect is a local-first CSV/XLSX data quality checker for analysts and data practitioners.** Upload a spreadsheet, see what looks wrong, define reusable validation rules, preview safe type conversions, clean common issues, and export the result — without sending the dataset to a RowSpect cloud service.
+
+> No RowSpect account. No project-operated upload backend. No telemetry. No analytics SDK. No AI API required.
 
 ## Why RowSpect
 
-Most spreadsheet quality problems are discovered manually: missing values, duplicate records, inconsistent types, unexpected categories, bad dates, or a column that quietly changed between reports. RowSpect turns that review into a repeatable workflow that an analyst can understand without first building a data-quality platform.
+A spreadsheet can look fine and still contain duplicate records, missing values, bad dates, numeric values stored as text, unexpected categories, or structural problems that break downstream work.
 
-**Use RowSpect when you want to:**
+RowSpect gives you a fast answer to a simple question:
 
-- inspect a CSV or XLSX file before using it downstream
-- find missing, duplicate, structural, type, and outlier signals quickly
-- define business rules such as “Customer ID must be unique” or “Revenue cannot be negative”
-- safely convert text numbers, dates, booleans, and other compatible columns
-- reuse the same validation rules on recurring files
-- export a cleaned spreadsheet plus HTML/JSON evidence of the review
+> **Is this file clean and consistent enough to trust downstream?**
+
+It is designed for people who want more than manual spreadsheet inspection but do not want to stand up a full warehouse data-quality platform just to review a CSV or Excel file.
+
+### RowSpect is useful when you need to
+
+- check a spreadsheet before loading it into Power BI, Tableau, Python, SQL, or a model
+- catch missing values, duplicate rows, suspicious types, constant columns, and potential outliers
+- enforce rules like **“Customer ID must be unique”** or **“Revenue cannot be negative”**
+- reuse the same checks on recurring weekly or monthly files
+- safely convert compatible text, number, boolean, and date columns
+- clean conservative issues without silently guessing values
+- export a cleaned file plus HTML/JSON evidence of what was found
 - keep the dataset on the machine where RowSpect is running
 
-RowSpect is intentionally narrower than a warehouse observability platform and more validation-focused than a general-purpose data transformation workbench. It is built for local, spreadsheet-first review.
+## What RowSpect does
 
-## What you get
-
-| Area | RowSpect 1.2 |
+| Capability | RowSpect 1.2 |
 | --- | --- |
-| Inputs | CSV and multi-sheet XLSX |
-| Generic profiling | Missing values, blanks, duplicates, duplicate headers, constants, numeric-text hints, IQR outliers, column statistics |
-| Business validation | Required, unique, numeric range, allowed values, regex, and date rules |
-| Safe conversion | Text, integer, float, boolean, date, and datetime |
-| Cleanup | Trim whitespace, normalize blanks, remove exact duplicates, remove empty rows |
-| Outputs | Cleaned CSV/XLSX, converted CSV/XLSX, HTML report, JSON profile, validation JSON |
-| Reuse | Portable JSON rule/conversion profiles |
-| Interfaces | Streamlit UI, Python API, CLI |
-| Privacy model | Local processing; no RowSpect cloud upload backend |
+| **Inputs** | CSV and multi-sheet XLSX |
+| **Automatic profiling** | Missing values, blanks, duplicate rows, duplicate headers, constants, numeric-text hints, IQR outliers, column statistics |
+| **Business rules** | Required, unique, numeric range, allowed values, regex, and date validation |
+| **Safe conversion** | Text, integer, float, boolean, date, and datetime |
+| **Cleanup** | Trim whitespace, normalize blanks, remove exact duplicates, remove empty rows |
+| **Exports** | Cleaned CSV/XLSX, converted CSV/XLSX, HTML report, JSON profile, validation JSON |
+| **Reusable checks** | Portable JSON validation/conversion profiles |
+| **Interfaces** | Streamlit UI, Python API, CLI |
+| **Privacy model** | Local processing; no RowSpect cloud upload backend |
 
-## A typical workflow
+## Try it in about a minute
+
+Requires **Python 3.11+**.
+
+```bash
+git clone https://github.com/LUKEcheadle-ship-it/RowSpect.git
+cd RowSpect
+python -m venv .venv
+```
+
+Activate the environment, then:
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Open the local URL printed by Streamlit and enable the built-in synthetic sample if you want to try RowSpect without using your own file.
+
+### Typical workflow
 
 1. **Upload** a CSV or Excel workbook.
 2. **Inspect** the quality score, review signals, column statistics, and charts.
@@ -45,13 +74,11 @@ RowSpect is intentionally narrower than a warehouse observability platform and m
 5. **Clean** conservative issues without imputation or guessed repairs.
 6. **Export** the cleaned data and a standalone report.
 
-The generic quality score is a review aid, not a truth score. RowSpect can identify suspicious structure and values, but it cannot know whether an arbitrary real-world value is factually correct unless you define a rule describing that expectation.
+## Reusable validation rules
 
-## New in 1.2
+RowSpect 1.2 lets you define what “good data” means for a specific file type.
 
-### Reusable validation rules
-
-Define what good data means for your dataset:
+Supported rules:
 
 - required fields
 - unique fields
@@ -62,9 +89,17 @@ Define what good data means for your dataset:
 
 Validation results show which rules pass or fail, how many values violate each rule, and the affected spreadsheet-style row numbers.
 
-### Strict type conversion
+Example rules:
 
-Preview and explicitly convert columns to:
+- `Customer ID` must be unique
+- `Revenue` must be greater than or equal to 0
+- `State` must be one of an approved set of values
+- `Email` must match a configured pattern
+- `Order Date` must contain a valid date
+
+## Strict type conversion
+
+RowSpect can preview and explicitly convert columns to:
 
 - text
 - integer
@@ -75,9 +110,13 @@ Preview and explicitly convert columns to:
 
 Conversions are **strict by default**. If a non-empty value cannot be converted safely, RowSpect blocks that conversion rather than silently replacing the value, partially converting the column, or guessing.
 
-### Portable rule profiles
+The original uploaded dataframe remains unchanged.
 
-Save validation rules and optional conversion plans as a small JSON profile and reuse them on the next file of the same kind. Profiles contain configuration only; they do not contain source dataset rows.
+## Reusable profiles
+
+Save validation rules and optional conversion plans as a small JSON profile and reuse them on the next file of the same kind.
+
+Profiles contain configuration only — not source dataset rows.
 
 ```bash
 rowspect customers.csv --rules-profile customer-rules.json
@@ -100,28 +139,9 @@ rowspect customers.csv \
   --apply-profile-conversions
 ```
 
-## Quick start
-
-Requires **Python 3.11+**.
-
-```bash
-git clone https://github.com/LUKEcheadle-ship-it/RowSpect.git
-cd RowSpect
-python -m venv .venv
-```
-
-Activate the environment, then:
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Open the local URL printed by Streamlit. You can enable the built-in synthetic sample before choosing your own file.
-
 ## CLI
 
-Install the package:
+Install the package locally:
 
 ```bash
 pip install -e .
@@ -133,7 +153,7 @@ Profile a CSV:
 rowspect sample_data/messy_customers.csv
 ```
 
-Write generic machine-readable and standalone reports:
+Write machine-readable and standalone reports:
 
 ```bash
 rowspect sample_data/messy_customers.csv \
@@ -148,25 +168,31 @@ rowspect workbook.xlsx --list-sheets
 rowspect workbook.xlsx --sheet "Sheet 2"
 ```
 
-## Production hardening
+## Explainable quality scoring
 
-RowSpect includes a repeatable qualification and deployment path rather than relying only on a developer machine:
+The generic quality score is a **review aid, not a truth score**.
 
-- 50 MB upload limit enforced by Streamlit and RowSpect validation
-- 250 MB maximum uncompressed XLSX size
-- 10,000 XLSX archive-entry limit
-- invalid, corrupt, encrypted, or implausibly expanded XLSX containers rejected before normal parsing
-- duplicate CSV/XLSX headers preserved and surfaced as structural issues
-- spreadsheet formula-like text neutralized on export by default
-- self-contained HTML reports escape user-controlled values
-- reusable rule profiles capped at 256 KB and validated before use
-- strict conversion plans never mutate the original upload
-- non-root Docker image with an HTTP health check
-- Streamlit XSRF/CORS protections left enabled
-- `rowspect --doctor` runtime diagnostics
-- automated release audit, wheel build, CLI/profile smoke, and live Streamlit smoke
+RowSpect applies visible deductions for problems such as missing cells, duplicate rows, blanks, constant columns, potential outliers, and structural issues. It does not pretend that a high score proves every real-world value is correct.
 
-See [`SECURITY.md`](SECURITY.md) and [`docs/SAFETY_REVIEW.md`](docs/SAFETY_REVIEW.md) for the security model and known limits.
+Business-specific expectations stay explicit through validation rules.
+
+## Privacy and safety
+
+RowSpect is intentionally local-first.
+
+- uploads are processed inside the running Streamlit/Python process
+- there is no RowSpect-hosted upload backend
+- no telemetry or analytics SDK is required
+- spreadsheet formula-like text is neutralized on export by default
+- malformed, corrupt, encrypted, and implausibly expanded XLSX files are rejected
+- uploads are limited to 50 MB
+- XLSX expansion is capped at 250 MB uncompressed
+- reusable rule profiles are size-limited and validated before use
+- strict conversions never mutate the original upload
+
+RowSpect is **not a malware sandbox** and is not presented as a hardened Internet-facing multi-tenant service.
+
+See [`SECURITY.md`](SECURITY.md) and [`docs/SAFETY_REVIEW.md`](docs/SAFETY_REVIEW.md) for the full security model and accepted limitations.
 
 ## Release qualification
 
@@ -176,17 +202,18 @@ RowSpect 1.2 completed its release checklist with:
 - strict `python scripts/qualify_release.py --require-ui` gate passing
 - real CSV and XLSX browser uploads passing
 - multi-sheet workbook switching passing
-- all six custom rule types exercised
+- all six custom validation rule types exercised
 - all six conversion targets exercised
 - unsafe conversion blocking verified
+- reusable profile round trip verified
 - cleanup controls tested independently and in combination
 - malformed and oversized upload handling verified
 - cleaned and converted CSV/XLSX outputs independently reopened with pandas/openpyxl
 - public-release audit, wheel build, CLI smoke, and rule-profile smoke passing
 
-A synthetic **100,000 × 20** profiling benchmark completed in **1.149 seconds** in the qualification environment. Benchmark results vary by hardware and dataset.
+A synthetic **100,000 × 20** profiling benchmark completed in **1.149 seconds** in the qualification environment. Results vary by hardware and dataset.
 
-The release checklist and exact qualification notes are in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
+See [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) for the exact qualification notes.
 
 ## Conservative cleaning
 
@@ -199,25 +226,6 @@ RowSpect can:
 - apply explicitly configured type conversions when every non-empty value is compatible
 
 It deliberately does **not** impute missing values or guess how invalid values should be repaired.
-
-Spreadsheet exports neutralize text beginning with common formula prefixes (`=`, `+`, `-`, `@`) by default. This can be disabled when exact literal preservation is more important.
-
-## Privacy and security
-
-Uploaded data is parsed inside the running Streamlit process. RowSpect contains no hosted backend or telemetry code. If you deploy Streamlit to another machine or network, that deployment becomes the place where the file is processed.
-
-RowSpect is **not a malware sandbox**. File limits and workbook checks reduce common resource-exhaustion risks, but untrusted files should still be handled according to your organization’s security policy. User-supplied regex rules are also local configuration rather than a hardened regex sandbox.
-
-See [`SECURITY.md`](SECURITY.md) for the full file-handling and export-safety notes.
-
-## Tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
-
-The suite covers CSV encodings/delimiters, Excel sheets and corruption, structural profiling, score output, cleanup, formula-safe exports, HTML escaping, chart helpers, CLI behavior, custom validation, strict conversions, reusable profiles, and release metadata.
 
 ## Project structure
 
@@ -244,6 +252,10 @@ tests/                  automated core tests
 ## Scope
 
 RowSpect targets small-to-medium local CSV and Excel datasets. It is not a data warehouse observability service, malware scanner, multi-tenant SaaS security boundary, or replacement for manual review of high-stakes data.
+
+## Contributing
+
+Issues, bug reports, and focused feature ideas are welcome. Useful additions should preserve RowSpect's small, local-first, explainable scope.
 
 ## License
 
