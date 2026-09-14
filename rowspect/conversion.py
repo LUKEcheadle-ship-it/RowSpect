@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
+from decimal import Decimal, InvalidOperation
+import math
 
 import pandas as pd
 
@@ -89,15 +91,34 @@ def _conversion_candidate(series: pd.Series, target_type: str) -> tuple[pd.Serie
         return result, pd.Series(False, index=series.index)
 
     if target_type in {"integer", "float"}:
-        numeric = pd.to_numeric(series.where(non_missing), errors="coerce")
-        invalid = non_missing & numeric.isna()
-        if target_type == "integer":
-            fractional = non_missing & numeric.notna() & ((numeric % 1).abs() > 1e-12)
-            invalid = invalid | fractional
-            result = numeric.round().astype("Int64")
-        else:
-            result = numeric.astype("Float64")
-        return result, invalid.fillna(False)
+        # Parse each value before casting. A float intermediate loses large
+        # integer digits when a column also contains missing values.
+        values: list[Any] = []
+        failures: list[bool] = []
+        for value, absent in zip(series.tolist(), missing.tolist()):
+            if absent:
+                values.append(pd.NA)
+                failures.append(False)
+                continue
+            try:
+                number = Decimal(str(value).strip())
+                if not number.is_finite():
+                    raise ValueError("non-finite value")
+                if target_type == "integer":
+                    if number != number.to_integral_value() or not -(2**63) <= number < 2**63:
+                        raise ValueError("not an exact Int64 value")
+                    parsed = int(number)
+                else:
+                    parsed = float(number)
+                    if not math.isfinite(parsed) or Decimal(str(parsed)) != number:
+                        raise ValueError("float would lose significant digits")
+                values.append(parsed)
+                failures.append(False)
+            except (InvalidOperation, ValueError, OverflowError, TypeError):
+                values.append(pd.NA)
+                failures.append(True)
+        dtype = "Int64" if target_type == "integer" else "Float64"
+        return pd.Series(values, index=series.index, dtype=dtype), pd.Series(failures, index=series.index)
 
     if target_type == "boolean":
         return _convert_boolean(series)
