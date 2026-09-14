@@ -97,3 +97,14 @@ def test_cli_comparison_and_failing_rows_do_not_overwrite_source(tmp_path):
     original = current.read_bytes()
     assert run([str(current), '--json', str(current)]) == 2
     assert current.read_bytes() == original
+
+
+def test_cross_column_dates_accept_native_python_date_cells():
+    from datetime import date
+    from rowspect.validation import validate_dataframe
+    frame = pd.DataFrame({'start': [date(2026, 9, 1), date(2026, 9, 4)],
+                          'end': [date(2026, 9, 2), date(2026, 9, 3)]})
+    result = validate_dataframe(frame, [{'id': 'dates', 'type': 'compare_columns',
+        'column': 'start', 'other_column': 'end', 'operator': 'le', 'comparison': 'date'}])
+    assert result['results'][0]['violation_count'] == 1
+    assert result['results'][0]['row_numbers'] == [3]

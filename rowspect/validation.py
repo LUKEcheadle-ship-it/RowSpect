@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import operator
 from decimal import Decimal, InvalidOperation
+from datetime import date, datetime
 from typing import Any
 
 import pandas as pd
@@ -230,7 +231,7 @@ def _dataframe_rule_mask(df: pd.DataFrame, rule: dict[str, Any]) -> pd.Series:
                 if not left.is_finite() or not right.is_finite():
                     raise ValueError("non-finite")
             elif rule["comparison"] == "date":
-                if not isinstance(left, (str, pd.Timestamp)) or not isinstance(right, (str, pd.Timestamp)):
+                if not isinstance(left, (str, date, datetime, pd.Timestamp)) or not isinstance(right, (str, date, datetime, pd.Timestamp)):
                     raise ValueError("not a date")
                 left, right = pd.Timestamp(left), pd.Timestamp(right)
                 if pd.isna(left) or pd.isna(right):
