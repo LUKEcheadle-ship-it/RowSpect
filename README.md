@@ -76,6 +76,8 @@ Open the local URL printed by Streamlit and enable the built-in synthetic sample
 
 ## Reusable validation rules
 
+Current development changes also support **Compare** for recurring deliveries, cross-column `compare_columns` rules, and a failing-row CSV with rule IDs and reasons. See [review improvements](docs/REVIEW_IMPROVEMENTS.md) for behavior and examples. These changes are not a published GitHub release yet.
+
 RowSpect 1.2 lets you define what “good data” means for a specific file type.
 
 Supported rules:

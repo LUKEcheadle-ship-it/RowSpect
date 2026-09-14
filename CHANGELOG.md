@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Preserve leading-zero CSV identifiers, NA/NULL text codes, Excel text cells, and exact nullable integers during import.
+- Block lossy, non-finite, fractional, and out-of-range strict numeric conversions without uncaught casting errors.
+- Neutralize formula-like headers as well as cells on export.
+- Add recurring-file comparisons, numeric/date/text cross-column rules, and complete failing-row CSV exports in the UI and CLI.
+- Prevent CLI outputs from overwriting input files or one another.
+
 ## 1.2.0
 
 Extended data-validation and safe-conversion release candidate.

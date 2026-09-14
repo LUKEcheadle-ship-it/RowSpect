@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+import operator
+from decimal import Decimal, InvalidOperation
+from datetime import date, datetime
 from typing import Any
 
 import pandas as pd
@@ -12,6 +15,7 @@ SUPPORTED_RULE_TYPES = {
     "allowed_values",
     "regex",
     "date",
+    "compare_columns",
 }
 SUPPORTED_SEVERITIES = {"critical", "warning", "info"}
 MAX_RULES = 100
@@ -63,7 +67,18 @@ def normalize_rule(rule: dict[str, Any], *, position: int = 0) -> dict[str, Any]
             raise ValidationRuleError("Rule message must be text no longer than 500 characters.")
         normalized["message"] = custom_message
 
-    if rule_type == "range":
+    if rule_type == "compare_columns":
+        other = rule.get("other_column")
+        if not isinstance(other, str) or not other.strip():
+            raise ValidationRuleError("A comparison requires another column name.")
+        operation = rule.get("operator", "le")
+        mode = rule.get("comparison", "numeric")
+        if operation not in {"eq", "ne", "lt", "le", "gt", "ge"}:
+            raise ValidationRuleError("Comparison operator must be eq, ne, lt, le, gt, or ge.")
+        if mode not in {"numeric", "date", "text"}:
+            raise ValidationRuleError("Comparison must be numeric, date, or text.")
+        normalized.update(other_column=other, operator=operation, comparison=mode)
+    elif rule_type == "range":
         minimum = rule.get("min")
         maximum = rule.get("max")
         if minimum is None and maximum is None:
@@ -126,6 +141,8 @@ def _rule_message(rule: dict[str, Any]) -> str:
 
     column = rule["column"]
     rule_type = rule["type"]
+    if rule_type == "compare_columns":
+        return f"{column} must be {rule['operator']} {rule['other_column']} ({rule['comparison']})."
     if rule_type == "required":
         return f"{column} must contain a value."
     if rule_type == "unique":
@@ -190,6 +207,43 @@ def _evaluate_rule(series: pd.Series, rule: dict[str, Any]) -> pd.Series:
     raise ValidationRuleError(f"Unsupported validation rule type: {rule_type}")
 
 
+def _dataframe_rule_mask(df: pd.DataFrame, rule: dict[str, Any]) -> pd.Series:
+    positions = _column_positions(df, rule["column"])
+    if len(positions) != 1:
+        raise ValidationRuleError("Rule column must exist exactly once.")
+    series = df.iloc[:, positions[0]]
+    if rule["type"] != "compare_columns":
+        return _evaluate_rule(series, rule).astype(bool)
+    others = _column_positions(df, rule["other_column"])
+    if len(others) != 1:
+        raise ValidationRuleError("Comparison column must exist exactly once.")
+    other = df.iloc[:, others[0]]
+    missing = _missing_mask(series) | _missing_mask(other)
+    compare = getattr(operator, rule["operator"])
+    failed = []
+    for left, right, absent in zip(series.tolist(), other.tolist(), missing.tolist()):
+        if absent:
+            failed.append(False)  # Use required rules to reject missing values.
+            continue
+        try:
+            if rule["comparison"] == "numeric":
+                left, right = Decimal(str(left)), Decimal(str(right))
+                if not left.is_finite() or not right.is_finite():
+                    raise ValueError("non-finite")
+            elif rule["comparison"] == "date":
+                if not isinstance(left, (str, date, datetime, pd.Timestamp)) or not isinstance(right, (str, date, datetime, pd.Timestamp)):
+                    raise ValueError("not a date")
+                left, right = pd.Timestamp(left), pd.Timestamp(right)
+                if pd.isna(left) or pd.isna(right):
+                    raise ValueError("missing parsed date")
+            else:
+                left, right = str(left), str(right)
+            failed.append(not compare(left, right))
+        except (ValueError, TypeError, InvalidOperation, OverflowError):
+            failed.append(True)
+    return pd.Series(failed, index=df.index, dtype=bool)
+
+
 def validate_dataframe(df: pd.DataFrame, rules: list[dict[str, Any]]) -> dict[str, Any]:
     """Validate a dataframe using deterministic, user-defined rules.
 
@@ -242,8 +296,14 @@ def validate_dataframe(df: pd.DataFrame, rules: list[dict[str, Any]]) -> dict[st
             )
             continue
 
-        series = df.iloc[:, positions[0]]
-        mask = _evaluate_rule(series, rule).astype(bool)
+        try:
+            mask = _dataframe_rule_mask(df, rule)
+        except ValidationRuleError as exc:
+            configuration_errors += 1
+            failing_rules += 1
+            results.append({**base, "status": "configuration_error", "violation_count": 0,
+                            "violation_pct": 0.0, "row_numbers": [], "details": str(exc)})
+            continue
         violating_positions = [index for index, failed in enumerate(mask.tolist()) if failed]
         violation_count = len(violating_positions)
         if violation_count:
@@ -274,3 +334,30 @@ def validate_dataframe(df: pd.DataFrame, rules: list[dict[str, Any]]) -> dict[st
         "validation_passed": failing_rules == 0,
         "results": results,
     }
+
+
+def failing_rows(df: pd.DataFrame, rules: list[dict[str, Any]]) -> pd.DataFrame:
+    """Export each failing source row once, with complete rule IDs and reasons.
+
+    Unlike the summary's bounded row-number examples, this includes all failures.
+    Configuration errors must be corrected before exporting a repair worksheet.
+    """
+    normalized = normalize_rules(rules)
+    if validate_dataframe(df, normalized)["configuration_error_count"]:
+        raise ValidationRuleError("Correct missing or ambiguous rule columns before exporting failing rows.")
+    failures: dict[int, list[dict[str, Any]]] = {}
+    for rule in normalized:
+        for position, failed in enumerate(_dataframe_rule_mask(df, rule).tolist()):
+            if failed:
+                failures.setdefault(position, []).append(rule)
+    positions = sorted(failures)
+    result = df.iloc[positions].copy()
+    for label, values in (
+        ("rowspect_source_row", [p + 2 for p in positions]),
+        ("rowspect_rule_ids", ["; ".join(r["id"] for r in failures[p]) for p in positions]),
+        ("rowspect_reasons", ["; ".join(_rule_message(r) for r in failures[p]) for p in positions]),
+    ):
+        while label in result.columns:
+            label = "_" + label
+        result.insert(len(result.columns), label, values)
+    return result.reset_index(drop=True)

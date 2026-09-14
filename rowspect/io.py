@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 import zipfile
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 from pandas.errors import EmptyDataError as PandasEmptyDataError
 from pandas.errors import ParserError
+from rowspect.conversion import _conversion_candidate
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
 MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -144,7 +146,29 @@ def get_excel_sheets(data: bytes) -> list[str]:
     return workbook.sheet_names
 
 
-def load_table(data: bytes, filename: str, sheet_name: str | None = None) -> pd.DataFrame:
+def _infer_safe_numbers(df: pd.DataFrame) -> pd.DataFrame:
+    """Infer numeric text only when exact conversion preserves meaningful digits.
+
+    Leading-zero identifiers, padded text, literal NA/NULL codes, and mixed
+    columns remain text. Empty cells alone are treated as missing.
+    """
+    result = df.copy()
+    for position in range(result.shape[1]):
+        series = result.iloc[:, position]
+        present = series.dropna()
+        if present.empty or not all(isinstance(value, str) for value in present):
+            continue
+        if any(value != value.strip() or re.match(r"^[+-]?0\d", value) for value in present):
+            continue
+        for target in ("integer", "float"):
+            candidate, invalid = _conversion_candidate(series, target)
+            if not invalid.any():
+                result.isetitem(position, candidate)
+                break
+    return result
+
+
+def load_table(data: bytes, filename: str, sheet_name: str | None = None, *, preserve_text: bool = False) -> pd.DataFrame:
     """Load a CSV or XLSX file from bytes without writing it to disk."""
     extension = validate_upload(data, filename)
 
@@ -153,13 +177,13 @@ def load_table(data: bytes, filename: str, sheet_name: str | None = None) -> pd.
             text = _decode_csv(data)
             delimiter = _detect_delimiter(text)
             raw_headers = _validate_csv_structure(text, delimiter)
-            df = pd.read_csv(StringIO(text), sep=delimiter)
+            df = pd.read_csv(StringIO(text), sep=delimiter, dtype=object, keep_default_na=False, na_values=[""])
             if len(raw_headers) == df.shape[1]:
                 df.columns = raw_headers
         else:
             _validate_xlsx_archive(data)
             raw_headers = _xlsx_raw_headers(data, sheet_name)
-            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl")
+            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[""])
             if raw_headers is not None and len(raw_headers) == df.shape[1]:
                 df.columns = raw_headers
     except csv.Error as exc:
@@ -176,4 +200,11 @@ def load_table(data: bytes, filename: str, sheet_name: str | None = None) -> pd.
 
     if df.shape[1] == 0:
         raise RowSpectIOError("No columns were found in this file.")
-    return df
+    if extension == ".xlsx":
+        # Excel already distinguishes native numbers from literal text. Preserve
+        # text cells, including numeric-looking IDs, and infer native columns only.
+        for position in range(df.shape[1]):
+            if not any(isinstance(value, str) for value in df.iloc[:, position].dropna()):
+                df.isetitem(position, df.iloc[:, position].convert_dtypes())
+        return df
+    return df if preserve_text else _infer_safe_numbers(df)

@@ -1,6 +1,7 @@
 """RowSpect public API."""
 
 from rowspect.clean import clean_dataframe, cleanup_summary
+from rowspect.comparison import compare_dataframes
 from rowspect.conversion import (
     ConversionError,
     analyze_type_conversion,
@@ -16,7 +17,7 @@ from rowspect.rule_profiles import (
     dump_rule_profile,
     load_rule_profile,
 )
-from rowspect.validation import ValidationRuleError, validate_dataframe
+from rowspect.validation import ValidationRuleError, validate_dataframe, failing_rows
 
 __all__ = [
     "ConversionError",
@@ -28,6 +29,8 @@ __all__ = [
     "build_html_report",
     "build_rule_profile",
     "clean_dataframe",
+    "compare_dataframes",
+    "failing_rows",
     "cleanup_summary",
     "dataframe_to_csv",
     "dataframe_to_xlsx",

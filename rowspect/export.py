@@ -20,6 +20,7 @@ def neutralize_formula_text(value):
 def export_safe_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy with formula-like text neutralized for spreadsheet export."""
     safe = df.copy(deep=True)
+    safe.columns = [neutralize_formula_text(name) for name in safe.columns]
     for idx in range(safe.shape[1]):
         series = safe.iloc[:, idx]
         if pd.api.types.is_object_dtype(series.dtype) or pd.api.types.is_string_dtype(series.dtype):
