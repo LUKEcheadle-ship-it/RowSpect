@@ -5,16 +5,15 @@ import json
 import sys
 from pathlib import Path
 
-from rowspect import __version__
+from rowspect import __version__, compare_dataframes, comparison_json, failing_rows_dataframe
 from rowspect.conversion import apply_type_conversions
-from rowspect.comparison import compare_dataframes
-from rowspect.export import dataframe_to_csv
 from rowspect.io import RowSpectIOError, get_excel_sheets, load_table
 from rowspect.profile import profile_dataframe
 from rowspect.report import build_html_report
 from rowspect.rule_profiles import RuleProfileError, load_rule_profile
 from rowspect.runtime import runtime_diagnostics
-from rowspect.validation import validate_dataframe, failing_rows, ValidationRuleError
+from rowspect.validation import validate_dataframe
+from rowspect.export import dataframe_to_csv
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,11 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("path", nargs="?", type=Path, help="Path to a .csv or .xlsx file")
     parser.add_argument("--sheet", help="Excel worksheet name (defaults to the first sheet)")
-    parser.add_argument("--preserve-text", action="store_true", help="Disable CSV numeric inference")
-    parser.add_argument("--baseline", type=Path, help="Earlier CSV/XLSX delivery to compare")
-    parser.add_argument("--baseline-sheet", help="Earlier workbook worksheet")
-    parser.add_argument("--comparison-json", type=Path, help="Write comparison (requires --baseline)")
-    parser.add_argument("--failing-rows", type=Path, help="Export failing rows CSV (requires --rules-profile)")
+    parser.add_argument("--baseline", type=Path, help="Previous CSV/XLSX file to compare with the current file")
+    parser.add_argument("--comparison-json", type=Path, help="Write deterministic file-to-file comparison JSON")
     parser.add_argument("--json", dest="json_path", type=Path, help="Write the full generic JSON profile")
     parser.add_argument("--html", dest="html_path", type=Path, help="Write a standalone HTML report")
     parser.add_argument("--list-sheets", action="store_true", help="List Excel worksheet names and exit")
@@ -58,6 +54,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Exit with status 1 when a configured validation rule fails",
     )
+    parser.add_argument(
+        "--failing-rows",
+        type=Path,
+        help="Write one CSV record per failing source row (requires --rules-profile)",
+    )
+    parser.add_argument(
+        "--preserve-text",
+        action="store_true",
+        help="Keep CSV fields as text instead of inferring unambiguous numeric columns",
+    )
     return parser
 
 
@@ -79,20 +85,23 @@ def _load_rules_profile(path: Path) -> dict:
     return load_rule_profile(data)
 
 
+def _same_path(first: Path, second: Path) -> bool:
+    try:
+        return first.resolve() == second.resolve()
+    except OSError:
+        return first.absolute() == second.absolute()
+
+
+def _json_dump(payload: dict) -> str:
+    return json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+
 def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.doctor:
         return _run_doctor()
     if args.path is None:
         print("RowSpect: a dataset path is required unless --doctor is used.", file=sys.stderr)
-        return 2
-    if (args.comparison_json and not args.baseline) or (args.failing_rows and not args.rules_profile):
-        print("RowSpect: comparison export requires --baseline; failing rows require --rules-profile.", file=sys.stderr)
-        return 2
-    outputs = [p for p in (args.json_path, args.html_path, args.validation_json, args.comparison_json, args.failing_rows) if p]
-    inputs = [p.resolve() for p in (args.path, args.rules_profile, args.baseline) if p]
-    if any(p.resolve() in inputs for p in outputs) or len({p.resolve() for p in outputs}) != len(outputs):
-        print("RowSpect: output paths must be distinct and must not overwrite an input.", file=sys.stderr)
         return 2
     if args.validation_json and not args.rules_profile:
         print("RowSpect: --validation-json requires --rules-profile.", file=sys.stderr)
@@ -102,6 +111,34 @@ def run(argv: list[str] | None = None) -> int:
         return 2
     if args.fail_on_validation and not args.rules_profile:
         print("RowSpect: --fail-on-validation requires --rules-profile.", file=sys.stderr)
+        return 2
+    if args.comparison_json and not args.baseline:
+        print("RowSpect: --comparison-json requires --baseline.", file=sys.stderr)
+        return 2
+    if args.failing_rows and not args.rules_profile:
+        print("RowSpect: --failing-rows requires --rules-profile.", file=sys.stderr)
+        return 2
+
+    output_paths = [
+        path
+        for path in (
+            args.json_path,
+            args.html_path,
+            args.validation_json,
+            args.comparison_json,
+            args.failing_rows,
+        )
+        if path
+    ]
+    if any(_same_path(args.path, output) for output in output_paths):
+        print("RowSpect: an export path must not overwrite the input dataset.", file=sys.stderr)
+        return 2
+    if args.baseline and any(_same_path(args.baseline, output) for output in output_paths):
+        print("RowSpect: an export path must not overwrite the baseline dataset.", file=sys.stderr)
+        return 2
+    resolved_outputs = [str(path.resolve()) for path in output_paths]
+    if len(resolved_outputs) != len(set(resolved_outputs)):
+        print("RowSpect: export paths must be distinct from one another.", file=sys.stderr)
         return 2
 
     try:
@@ -123,6 +160,21 @@ def run(argv: list[str] | None = None) -> int:
     except RowSpectIOError as exc:
         print(f"RowSpect: {exc}", file=sys.stderr)
         return 2
+
+    comparison = None
+    if args.baseline:
+        try:
+            baseline_data = args.baseline.read_bytes()
+            baseline = load_table(
+                baseline_data,
+                args.baseline.name,
+                sheet_name=args.sheet,
+                preserve_text=args.preserve_text,
+            )
+            comparison = compare_dataframes(df, baseline)
+        except (OSError, RowSpectIOError) as exc:
+            print(f"RowSpect: could not load baseline {args.baseline}: {exc}", file=sys.stderr)
+            return 2
 
     rules_profile = None
     validation = None
@@ -153,15 +205,6 @@ def run(argv: list[str] | None = None) -> int:
         validation = validate_dataframe(df, rules_profile["rules"])
 
     profile = profile_dataframe(df)
-    comparison = None
-    if args.baseline:
-        try:
-            baseline = load_table(args.baseline.read_bytes(), args.baseline.name, sheet_name=args.baseline_sheet, preserve_text=args.preserve_text)
-            comparison = compare_dataframes(baseline, df)
-            print(f"baseline={args.baseline.name} row-change={comparison['row_change']} added-columns={len(comparison['added_columns'])} removed-columns={len(comparison['removed_columns'])}")
-        except (OSError, ValueError) as exc:
-            print(f"RowSpect: could not compare baseline: {exc}", file=sys.stderr)
-            return 2
     print(
         f"{args.path.name}: {profile['rows']} rows x {profile['columns_count']} columns | "
         f"quality {profile['quality_score']}/100 ({profile['quality_label']}) | "
@@ -171,6 +214,12 @@ def run(argv: list[str] | None = None) -> int:
         f"critical={profile['critical_count']} warning={profile['warning_count']} "
         f"info={profile['info_count']} missing={profile['missing_pct']}% duplicates={profile['duplicate_rows']}"
     )
+    if comparison is not None:
+        print(
+            f"comparison=baseline:{comparison['baseline_rows']} rows -> current:{comparison['current_rows']} rows "
+            f"row_delta={comparison['row_count_change']:+d} "
+            f"quality_delta={comparison['quality_score_change']:+.1f}"
+        )
 
     if rules_profile is not None and validation is not None:
         status = "PASS" if validation["validation_passed"] else "FAIL"
@@ -186,20 +235,21 @@ def run(argv: list[str] | None = None) -> int:
             )
 
     try:
-        if args.failing_rows and rules_profile is not None:
-            args.failing_rows.write_bytes(dataframe_to_csv(failing_rows(df, rules_profile["rules"])))
-        if args.comparison_json and comparison is not None:
-            args.comparison_json.write_text(json.dumps(comparison, indent=2, allow_nan=False), encoding="utf-8")
         if args.json_path:
-            args.json_path.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+            args.json_path.write_text(_json_dump(profile), encoding="utf-8")
         if args.html_path:
             args.html_path.write_text(build_html_report(profile, args.path.name), encoding="utf-8")
         if args.validation_json and validation is not None:
             args.validation_json.write_text(
-                json.dumps(validation, indent=2, ensure_ascii=False),
+                _json_dump(validation),
                 encoding="utf-8",
             )
-    except (OSError, ValidationRuleError) as exc:
+        if args.comparison_json and comparison is not None:
+            args.comparison_json.write_text(comparison_json(comparison), encoding="utf-8")
+        if args.failing_rows and validation is not None:
+            failing = failing_rows_dataframe(df, validation)
+            args.failing_rows.write_bytes(dataframe_to_csv(failing))
+    except OSError as exc:
         print(f"RowSpect: could not write an export file: {exc}", file=sys.stderr)
         return 2
 

@@ -9,12 +9,13 @@ from pathlib import Path
 import pandas as pd
 from pandas.errors import EmptyDataError as PandasEmptyDataError
 from pandas.errors import ParserError
-from rowspect.conversion import _conversion_candidate
 
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
 MAX_FILE_BYTES = 50 * 1024 * 1024
 MAX_XLSX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024
 MAX_XLSX_ARCHIVE_ENTRIES = 10_000
+_CANONICAL_INTEGER = re.compile(r"(?:0|-?[1-9]\d*)\Z")
+_CANONICAL_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?\Z")
 
 
 class RowSpectIOError(ValueError):
@@ -108,6 +109,28 @@ def _validate_xlsx_archive(data: bytes) -> None:
         raise RowSpectIOError("Could not open this Excel workbook. It may be corrupt or invalid.") from exc
 
 
+def _infer_csv_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Infer only unambiguous numeric CSV columns.
+
+    Pandas' default NA vocabulary and integer inference can turn literal codes
+    such as ``NA`` or ``00123`` into missing values or numbers. RowSpect keeps
+    those tokens as text and infers numbers only when every non-empty token is
+    a canonical, unpadded numeric literal.
+    """
+    inferred = df.copy(deep=True)
+    for position in range(inferred.shape[1]):
+        series = inferred.iloc[:, position]
+        values = series.dropna()
+        if values.empty:
+            continue
+        tokens = [str(value) for value in values.tolist()]
+        if all(_CANONICAL_INTEGER.fullmatch(token) for token in tokens):
+            inferred.isetitem(position, pd.to_numeric(series, errors="coerce").astype("Int64"))
+        elif all(_CANONICAL_NUMBER.fullmatch(token) for token in tokens):
+            inferred.isetitem(position, pd.to_numeric(series, errors="coerce").astype("Float64"))
+    return inferred
+
+
 def _xlsx_raw_headers(data: bytes, sheet_name: str | None) -> list[object] | None:
     """Read the original first-row headers so duplicate names are not hidden by pandas."""
     try:
@@ -146,29 +169,13 @@ def get_excel_sheets(data: bytes) -> list[str]:
     return workbook.sheet_names
 
 
-def _infer_safe_numbers(df: pd.DataFrame) -> pd.DataFrame:
-    """Infer numeric text only when exact conversion preserves meaningful digits.
-
-    Leading-zero identifiers, padded text, literal NA/NULL codes, and mixed
-    columns remain text. Empty cells alone are treated as missing.
-    """
-    result = df.copy()
-    for position in range(result.shape[1]):
-        series = result.iloc[:, position]
-        present = series.dropna()
-        if present.empty or not all(isinstance(value, str) for value in present):
-            continue
-        if any(value != value.strip() or re.match(r"^[+-]?0\d", value) for value in present):
-            continue
-        for target in ("integer", "float"):
-            candidate, invalid = _conversion_candidate(series, target)
-            if not invalid.any():
-                result.isetitem(position, candidate)
-                break
-    return result
-
-
-def load_table(data: bytes, filename: str, sheet_name: str | None = None, *, preserve_text: bool = False) -> pd.DataFrame:
+def load_table(
+    data: bytes,
+    filename: str,
+    sheet_name: str | None = None,
+    *,
+    preserve_text: bool = False,
+) -> pd.DataFrame:
     """Load a CSV or XLSX file from bytes without writing it to disk."""
     extension = validate_upload(data, filename)
 
@@ -177,13 +184,25 @@ def load_table(data: bytes, filename: str, sheet_name: str | None = None, *, pre
             text = _decode_csv(data)
             delimiter = _detect_delimiter(text)
             raw_headers = _validate_csv_structure(text, delimiter)
-            df = pd.read_csv(StringIO(text), sep=delimiter, dtype=object, keep_default_na=False, na_values=[""])
+            # Read as text first so identifiers and literal NA/NULL tokens are
+            # not rewritten by pandas' default inference rules. Empty fields
+            # remain missing; semantic tokens remain literal text.
+            df = pd.read_csv(
+                StringIO(text),
+                sep=delimiter,
+                dtype="string",
+                keep_default_na=False,
+                na_filter=False,
+            )
+            df = df.replace({"": pd.NA})
+            if not preserve_text:
+                df = _infer_csv_columns(df)
             if len(raw_headers) == df.shape[1]:
                 df.columns = raw_headers
         else:
             _validate_xlsx_archive(data)
             raw_headers = _xlsx_raw_headers(data, sheet_name)
-            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl", dtype=object, keep_default_na=False, na_values=[""])
+            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl")
             if raw_headers is not None and len(raw_headers) == df.shape[1]:
                 df.columns = raw_headers
     except csv.Error as exc:
@@ -200,11 +219,4 @@ def load_table(data: bytes, filename: str, sheet_name: str | None = None, *, pre
 
     if df.shape[1] == 0:
         raise RowSpectIOError("No columns were found in this file.")
-    if extension == ".xlsx":
-        # Excel already distinguishes native numbers from literal text. Preserve
-        # text cells, including numeric-looking IDs, and infer native columns only.
-        for position in range(df.shape[1]):
-            if not any(isinstance(value, str) for value in df.iloc[:, position].dropna()):
-                df.isetitem(position, df.iloc[:, position].convert_dtypes())
-        return df
-    return df if preserve_text else _infer_safe_numbers(df)
+    return df

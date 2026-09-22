@@ -1,24 +1,24 @@
 # Release checklist
 
-A public RowSpect release should not be advertised until all required gates pass. This checklist applies to the **1.2.0** validation/conversion release candidate and must be requalified independently of 1.1.
+A public RowSpect release should not be advertised until all required gates pass. This checklist applies to the **1.3.0** release candidate. Historical 1.2 qualification evidence is not reused as 1.3 evidence.
 
 ## Required
 
-- [x] `python scripts/qualify_release.py --require-ui` passes
-- [x] all automated tests pass
-- [x] package version, README, and changelog agree
+- [ ] `python scripts/qualify_release.py --require-ui` passes on the final candidate
+- [ ] all automated tests pass on the final candidate
+- [ ] package version, README, and changelog agree
 - [x] CLI generic profiling produces JSON and HTML outputs
-- [x] CLI reusable-profile validation produces validation JSON
-- [x] CLI strict profile conversions are exercised
-- [x] Streamlit server health smoke passes
+- [ ] CLI reusable-profile validation produces validation JSON
+- [ ] CLI comparison produces deterministic comparison JSON
+- [ ] CLI failing-row export is deduplicated and includes source row/reasons
+- [ ] CLI strict profile conversions are exercised, including Int64 and float safety
+- [ ] Streamlit server health smoke passes
 - [x] manual browser walkthrough passes using both the built-in sample and one XLSX workbook
-- [x] cleaned CSV and XLSX downloads parse successfully with independent pandas/openpyxl reads
-- [x] converted CSV and XLSX downloads parse successfully with independent pandas/openpyxl reads
-- [x] reusable profile download can be reloaded and produces the same rules/conversions
+- [ ] CSV and XLSX cleaned downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
+- [ ] converted CSV and XLSX downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
+- [ ] reusable profile download can be reloaded and produces the same rules/conversions
 - [x] repository contains no private datasets, credentials, secrets, or machine-specific paths
 - [x] security and deployment docs match actual behavior
-
-Native opening in Excel/LibreOffice is a useful additional release sanity check when such an application is available, but it is not a blocking gate. The 1.2 qualification environment did not provide a native spreadsheet application; exported CSV/XLSX files were instead reopened and validated programmatically with pandas/openpyxl.
 
 ## Manual UI walkthrough
 
@@ -47,17 +47,18 @@ Check:
 - [x] custom validation JSON download
 - [x] malformed/oversized file error handling
 - [x] numeric header `0` displays as `0` in Validate and Convert selectors
-
-## Qualification environment notes
-
-- The unisolated Windows `python -m pytest -q` command encountered a stale pytest temp-directory permission issue on the qualification host.
-- The isolated 82-test suite and `python scripts/qualify_release.py --require-ui` both passed, so this is recorded as a host-environment limitation rather than a RowSpect product failure.
+- [ ] Compare tab explains baseline/current changes and exports JSON
+- [ ] CSV identifier safety and Preserve CSV text behavior are verified
+- [ ] cross-column numeric/date/text modes and all operators are verified
+- [ ] failing-row CSV warning about original source data is visible
 
 ## Publish
 
-Only after the gates above pass:
+Only after every required gate above passes:
 
 - make the repository public
 - create/tag the release
 - add screenshots or a short demo GIF to the README
 - announce the project
+
+Record the exact final test count, qualification command, benchmark environment, and unavailable checks in `CHANGELOG.md` and `docs/LAUNCH.md`. Do not publish a GitHub Release from this repository until the final qualification evidence has been reviewed.

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_release_versions_are_consistent():
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     version = pyproject["project"]["version"]
-    assert version == rowspect.__version__ == "1.2.0"
+    assert version == rowspect.__version__ == "1.3.0"
 
 
 def test_production_files_exist():
@@ -20,12 +20,15 @@ def test_production_files_exist():
         "docs/DEPLOYMENT.md",
         "docs/RELEASE_CHECKLIST.md",
         "docs/RULE_PROFILES.md",
+        "docs/LAUNCH.md",
+        "docs/REVIEW_IMPROVEMENTS.md",
         "sample_data/customer_rules.json",
         "scripts/qualify_release.py",
         "scripts/smoke_streamlit.py",
         "scripts/audit_public_release.py",
         "rowspect/validation.py",
         "rowspect/conversion.py",
+        "rowspect/comparison.py",
         "rowspect/rule_profiles.py",
     ]
     for relative in expected:

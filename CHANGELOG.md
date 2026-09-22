@@ -1,12 +1,22 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
-- Preserve leading-zero CSV identifiers, NA/NULL text codes, Excel text cells, and exact nullable integers during import.
-- Block lossy, non-finite, fractional, and out-of-range strict numeric conversions without uncaught casting errors.
-- Neutralize formula-like headers as well as cells on export.
-- Add recurring-file comparisons, numeric/date/text cross-column rules, and complete failing-row CSV exports in the UI and CLI.
-- Prevent CLI outputs from overwriting input files or one another.
+Release-candidate feature set; exact qualification evidence is added only after the final candidate passes.
+
+### Added
+- descriptive current CSV/XLSX versus baseline comparison with deterministic JSON output
+- `compare_columns` validation for numeric, date, and text modes using `eq`, `ne`, `lt`, `le`, `gt`, and `ge`
+- deduplicated failing-row CSV export with source row numbers, failed rule IDs, and human-readable reasons
+- safer CSV inference that preserves padded identifiers and literal `NA`/`NULL` tokens, plus `--preserve-text`
+
+### Hardened
+- Decimal-based signed Int64 conversion bounds and fractional-value rejection
+- finite, loss-aware float conversion
+- formula-like header neutralization and CLI output-path collision protection
+
+### Qualification
+- To be recorded from the exact final 1.3 candidate in `docs/LAUNCH.md`; historical 1.2 evidence below remains labeled historical.
 
 ## 1.2.0
 

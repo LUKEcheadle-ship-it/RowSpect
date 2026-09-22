@@ -70,3 +70,19 @@ def test_loaded_duplicate_headers_reach_profiler():
     profile = profile_dataframe(df)
     assert profile["duplicate_columns"] == 1
     assert any(issue["category"] == "duplicate_columns" for issue in profile["issues"])
+
+
+def test_comparison_reports_schema_missingness_median_and_new_categories():
+    from rowspect.comparison import compare_dataframes, comparison_json
+
+    baseline = pd.DataFrame({"amount": [10, 20], "state": ["AL", "GA"]})
+    current = pd.DataFrame({"amount": [20, 40, None], "state": ["AL", "TX", "TX"], "new": [1, 2, 3]})
+    result = compare_dataframes(current, baseline)
+    assert result["row_count_change"] == 1
+    assert result["columns_added"] == ["new"]
+    assert result["quality_score_change"] < 0
+    amount = next(item for item in result["column_changes"] if item["column"] == "amount")
+    assert amount["numeric_median_change"] == 15.0
+    state = next(item for item in result["column_changes"] if item["column"] == "state")
+    assert state["new_category_examples"] == ["TX"]
+    assert comparison_json(result).startswith("{")

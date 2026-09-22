@@ -20,12 +20,17 @@ def neutralize_formula_text(value):
 def export_safe_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy with formula-like text neutralized for spreadsheet export."""
     safe = df.copy(deep=True)
-    safe.columns = [neutralize_formula_text(name) for name in safe.columns]
+    safe.columns = [neutralize_formula_text(str(column)) for column in safe.columns]
     for idx in range(safe.shape[1]):
         series = safe.iloc[:, idx]
         if pd.api.types.is_object_dtype(series.dtype) or pd.api.types.is_string_dtype(series.dtype):
             safe.iloc[:, idx] = series.map(neutralize_formula_text)
     return safe
+
+
+def dataframe_to_failing_rows_csv(df: pd.DataFrame, *, neutralize_formulas: bool = True) -> bytes:
+    """Serialize a validation failure extract, including its audit columns."""
+    return dataframe_to_csv(df, neutralize_formulas=neutralize_formulas)
 
 
 def dataframe_to_csv(df: pd.DataFrame, *, neutralize_formulas: bool = True) -> bytes:
