@@ -13,23 +13,21 @@ This file is the release-note template for the final 1.3 candidate. It must cont
 
 ## Qualification evidence
 
-To be filled after the final candidate passes:
-
-- Version:
-- Branch and HEAD SHA:
-- Qualification command:
-- Pytest pass/fail/skip counts:
-- Package build:
-- CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks:
-- UI smoke:
-- Public-release audit:
-- Benchmark command, exact result, and environment:
+- Version: 1.3.0
+- Branch and HEAD SHA: `feature/v1.2-validation-conversion-profiles` at `eaf6d2f`
+- Qualification command: `python scripts/qualify_release.py --require-ui`
+- Pytest: 93 passed, 0 failed, 0 skipped
+- Package build: `rowspect-1.3.0-py3-none-any.whl` built successfully
+- CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks: passed
+- UI smoke: passed on loopback
+- Public-release audit: passed
+- Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.924s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
 
 The historical RowSpect 1.2 result of 82/82 tests remains historical evidence only. It is not a 1.3 result.
 
 ## Screenshots
 
-No suitable real RowSpect screenshots were present in the repository during the release-candidate audit. Before public launch, capture these from the qualified Streamlit app using synthetic data only:
+No screenshot files are stored in the repository yet. The qualified app was inspected with synthetic data during this pass; before public launch, save these real-app captures under `docs/assets/` and reference them from the README:
 
 1. Overview with the quality score and issue summary.
 2. Validate with visible rule failures and row numbers.

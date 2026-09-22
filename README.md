@@ -98,6 +98,10 @@ rowspect customers.csv \
 
 Comparison is descriptive change detection, not statistical significance testing, and the generic quality score is a review aid—not proof that a dataset is correct.
 
+## 1.3 release-candidate evidence
+
+The exact candidate passed `python scripts/qualify_release.py --require-ui`: 93 tests passed with 0 failures and 0 skips; compile, wheel build, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, public-release audit, and live Streamlit smoke passed. The observed benchmark was 100,000 rows × 20 columns in 1.924 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. See [`docs/LAUNCH.md`](docs/LAUNCH.md) for the release boundary and screenshot capture notes.
+
 ## Production hardening
 
 RowSpect includes a repeatable release and deployment path rather than relying on one developer machine:
