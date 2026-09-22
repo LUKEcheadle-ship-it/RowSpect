@@ -92,6 +92,22 @@ def main() -> int:
         if validation.get("violation_count", 0) < 1:
             raise SystemExit("Release qualification failed: bundled messy sample produced no validation violations.")
 
+        from rowspect.rule_profiles import build_rule_profile, dump_rule_profile, load_rule_profile
+
+        round_trip_profile = build_rule_profile(
+            "Qualification profile",
+            description="Serialized and reloaded during release qualification",
+            rules=[
+                {"id": "email-required", "type": "required", "column": "email"},
+                {"id": "age-range", "type": "range", "column": "age", "min": 18, "max": 100},
+            ],
+            conversions=[{"id": "age-int", "column": "age", "target_type": "integer"}],
+        )
+        reloaded_profile = load_rule_profile(dump_rule_profile(round_trip_profile))
+        if reloaded_profile["rules"] != round_trip_profile["rules"] or reloaded_profile["conversions"] != round_trip_profile["conversions"]:
+            raise SystemExit("Release qualification failed: reusable profile round-trip changed rules or conversions.")
+        print("[gate] reusable profile round-trip: PASS")
+
         # 1.3 workflow gate: comparison, cross-column rules, preserved text,
         # and one-record-per-source-row failure export.
         baseline_path = temp / "baseline.csv"
@@ -154,7 +170,9 @@ def main() -> int:
 
         from rowspect.clean import clean_dataframe
         from rowspect.conversion import apply_type_conversions
+        from rowspect.export import dataframe_to_csv, dataframe_to_xlsx
         from rowspect.io import RowSpectIOError, load_table, validate_upload
+        import pandas as pd
 
         preserved = load_table(current_path.read_bytes(), current_path.name, preserve_text=True)
         if preserved.iloc[0, 0] != "001" or preserved.iloc[0, 3] != "NA":
@@ -168,6 +186,13 @@ def main() -> int:
         cleaned = clean_dataframe(preserved, drop_duplicates=True, trim_strings=True, normalize_blank_strings=True, drop_empty_rows=True)
         if len(cleaned) != 3:
             raise SystemExit("Release qualification failed: cleanup smoke failed.")
+        cleaned_csv = dataframe_to_csv(cleaned)
+        if len(pd.read_csv(BytesIO(cleaned_csv), keep_default_na=False)) != len(cleaned):
+            raise SystemExit("Release qualification failed: cleaned CSV could not be reloaded.")
+        cleaned_xlsx = dataframe_to_xlsx(cleaned)
+        if len(pd.read_excel(BytesIO(cleaned_xlsx), engine="openpyxl")) != len(cleaned):
+            raise SystemExit("Release qualification failed: cleaned XLSX could not be reloaded.")
+        print("[gate] cleaned CSV/XLSX archive reload: PASS")
         try:
             load_table(b"a,b\n1,2,3\n", "malformed.csv")
         except RowSpectIOError:
@@ -182,7 +207,6 @@ def main() -> int:
             raise SystemExit("Release qualification failed: oversized input was accepted.")
 
         workbook_path = temp / "multi-sheet.xlsx"
-        import pandas as pd
 
         with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
             pd.DataFrame({"id": [1]}).to_excel(writer, sheet_name="First", index=False)
