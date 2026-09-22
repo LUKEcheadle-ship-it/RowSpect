@@ -16,11 +16,13 @@ A public RowSpect release should not be advertised until all required gates pass
 - [ ] manual browser walkthrough passes using both the built-in sample and one XLSX workbook — automated UI smoke passed; full manual XLSX walkthrough remains to be done
 - [ ] CSV and XLSX cleaned downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
 - [ ] converted CSV and XLSX downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
-- [ ] reusable profile download can be reloaded and produces the same rules/conversions
+- [x] reusable profile serialization can be reloaded and produces the same rules/conversions — explicit qualification gate plus unit coverage
 - [x] repository contains no private datasets, credentials, secrets, or machine-specific paths
 - [x] security and deployment docs match actual behavior
 
 ## Manual UI walkthrough
+
+The built-in sample walkthrough was completed on the final candidate across Overview, Issues, Columns, Explore, Validate, Convert, Clean, Export, and Compare. The items below remain unchecked when they require an uploaded XLSX, a downloaded artifact, or a native spreadsheet application.
 
 Check:
 

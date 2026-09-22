@@ -14,14 +14,17 @@ This file is the release-note template for the final 1.3 candidate. It must cont
 ## Qualification evidence
 
 - Version: 1.3.0
-- Branch and HEAD SHA: `feature/v1.2-validation-conversion-profiles` at `eaf6d2f`
+- Branch: `feature/v1.2-validation-conversion-profiles`
+- Qualification target SHA: `5b9fc06`
 - Qualification command: `python scripts/qualify_release.py --require-ui`
 - Pytest: 93 passed, 0 failed, 0 skipped
 - Package build: `rowspect-1.3.0-py3-none-any.whl` built successfully
 - CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks: passed
+- reusable-profile serialize/reload round-trip: passed
+- cleaned CSV/XLSX archive reload with pandas/openpyxl: passed
 - UI smoke: passed on loopback
 - Public-release audit: passed
-- Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.936s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
+- Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.923s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
 
 The historical RowSpect 1.2 result of 82/82 tests remains historical evidence only. It is not a 1.3 result.
 

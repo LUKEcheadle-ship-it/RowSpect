@@ -18,7 +18,7 @@ Release-candidate feature set; exact qualification evidence is added only after 
 ### Qualification
 - Exact final-candidate gate: `python scripts/qualify_release.py --require-ui`
 - 93 tests passed, 0 failed, 0 skipped; compile, wheel build, public-release audit, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, and live Streamlit UI smoke passed.
-- Benchmark: 100,000 rows x 20 columns in 1.936 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
+- Benchmark: 100,000 rows x 20 columns in 1.923 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
 
 ## 1.2.0
 
