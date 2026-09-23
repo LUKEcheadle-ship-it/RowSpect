@@ -14,17 +14,19 @@ This file is the release-note template for the final 1.3 candidate. It must cont
 ## Qualification evidence
 
 - Version: 1.3.0
-- Branch: `feature/v1.2-validation-conversion-profiles`
-- Qualification target SHA: `5b9fc06`
+- Branch: `release/rowspect-1.3-20260923`
+- Qualification target SHA: `6018b7a5961c42040fc8c659311fc6479aa28f41`
 - Qualification command: `python scripts/qualify_release.py --require-ui`
-- Pytest: 93 passed, 0 failed, 0 skipped
+- Pytest: 107 passed, 0 failed, 0 skipped
 - Package build: `rowspect-1.3.0-py3-none-any.whl` built successfully
 - CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks: passed
 - reusable-profile serialize/reload round-trip: passed
 - cleaned CSV/XLSX archive reload with pandas/openpyxl: passed
 - UI smoke: passed on loopback
 - Public-release audit: passed
-- Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.923s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
+- Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.452s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
+
+The remaining checks are explicitly listed in `docs/RELEASE_CHECKLIST.md`: a manual XLSX browser walkthrough and opening generated workbooks in a native spreadsheet application were unavailable in the qualification environment. Do not treat this source merge as a published package or GitHub Release.
 
 The historical RowSpect 1.2 result of 82/82 tests remains historical evidence only. It is not a 1.3 result.
 

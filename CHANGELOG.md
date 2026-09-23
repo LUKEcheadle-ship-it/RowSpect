@@ -2,7 +2,7 @@
 
 ## 1.3.0
 
-Release-candidate feature set; exact qualification evidence is added only after the final candidate passes.
+Qualified RowSpect 1.3.0 candidate; the manual XLSX walkthrough and native spreadsheet-app opening checks remain outstanding.
 
 ### Added
 - descriptive current CSV/XLSX versus baseline comparison with deterministic JSON output
@@ -16,9 +16,10 @@ Release-candidate feature set; exact qualification evidence is added only after 
 - formula-like header neutralization and CLI output-path collision protection
 
 ### Qualification
-- Exact final-candidate gate: `python scripts/qualify_release.py --require-ui`
-- 93 tests passed, 0 failed, 0 skipped; compile, wheel build, public-release audit, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, and live Streamlit UI smoke passed.
-- Benchmark: 100,000 rows x 20 columns in 1.923 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
+- Qualified source snapshot: `6018b7a5961c42040fc8c659311fc6479aa28f41` on `release/rowspect-1.3-20260923`.
+- Exact qualification gate: `python scripts/qualify_release.py --require-ui` — PASS; 107 tests passed, 0 failed, 0 skipped.
+- Compile, wheel build, public-release audit, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, and live Streamlit UI smoke passed. The release checklist retains the manual XLSX walkthrough and native spreadsheet-app opening checks as outstanding.
+- Benchmark: 100,000 rows x 20 columns in 1.452 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
 
 ## 1.2.0
 
