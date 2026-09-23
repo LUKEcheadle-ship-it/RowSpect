@@ -93,7 +93,28 @@ def test_cli_validation_only_flags_require_profile(tmp_path, capsys):
     code = run([str(source), "--validation-json", str(tmp_path / "validation.json")])
     assert code == 2
     assert "requires --rules-profile" in capsys.readouterr().err
-
     code = run([str(source), "--fail-on-validation"])
     assert code == 2
     assert "requires --rules-profile" in capsys.readouterr().err
+
+
+def test_cli_exports_deduplicated_failing_rows(tmp_path):
+    source = tmp_path / "customers.csv"
+    source.write_text("id,age\n1,17\n1,17\n2,30\n", encoding="utf-8")
+    profile_path = tmp_path / "rules.json"
+    profile_path.write_bytes(
+        dump_rule_profile(
+            build_rule_profile(
+                "checks",
+                rules=[
+                    {"id": "unique", "type": "unique", "column": "id"},
+                    {"id": "adult", "type": "range", "column": "age", "min": 18},
+                ],
+            )
+        )
+    )
+    output = tmp_path / "failing.csv"
+    assert run([str(source), "--rules-profile", str(profile_path), "--failing-rows", str(output)]) == 0
+    rows = output.read_text(encoding="utf-8").splitlines()
+    assert len(rows) == 3
+    assert "_rowspect_failed_rule_ids" in rows[0]

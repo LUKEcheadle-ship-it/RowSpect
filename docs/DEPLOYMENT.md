@@ -19,13 +19,13 @@ Then open `http://127.0.0.1:8501`.
 Build:
 
 ```bash
-docker build -t rowspect:1.1.0 .
+docker build -t rowspect:1.3.0 .
 ```
 
 Run loopback-only:
 
 ```bash
-docker run --rm -p 127.0.0.1:8501:8501 rowspect:1.1.0
+docker run --rm -p 127.0.0.1:8501:8501 rowspect:1.3.0
 ```
 
 The image runs as a non-root user and includes a health check against Streamlit's local health endpoint.
@@ -38,7 +38,7 @@ Do not present an Internet-exposed Streamlit process as a hardened multi-tenant 
 
 ## File limits
 
-V1.1 enforces:
+The current release candidate enforces:
 
 - 50 MB compressed/upload size
 - 250 MB maximum uncompressed XLSX archive size

@@ -99,3 +99,15 @@ def test_xlsx_archive_expansion_limit(monkeypatch):
 def test_malformed_csv_quoting_has_clean_error():
     with pytest.raises(RowSpectIOError, match="malformed quoting"):
         load_table(b'a,b\n"1,2\n', "bad-quotes.csv")
+
+
+def test_csv_inference_preserves_identifiers_and_literal_missing_tokens():
+    df = load_table(b"id,code\n00123,NA\n00007,NULL\n", "identifiers.csv")
+    assert df["id"].tolist() == ["00123", "00007"]
+    assert df["code"].tolist() == ["NA", "NULL"]
+
+
+def test_preserve_text_disables_numeric_inference():
+    df = load_table(b"amount\n10\n20\n", "amounts.csv", preserve_text=True)
+    assert df["amount"].tolist() == ["10", "20"]
+    assert str(df["amount"].dtype).startswith("string")

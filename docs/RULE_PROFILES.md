@@ -1,6 +1,6 @@
 # Reusable rule profiles
 
-RowSpect 1.2 profiles are small UTF-8 JSON files that describe business-specific validation rules and optional explicit type-conversion plans. They contain configuration only; RowSpect does not write source dataset rows into a profile.
+RowSpect 1.3 profiles are small UTF-8 JSON files that describe business-specific validation rules and optional explicit type-conversion plans. They contain configuration only; RowSpect does not write source dataset rows into a profile.
 
 ## Profile shape
 
@@ -80,6 +80,22 @@ Patterns use Python regular-expression full-match semantics. Profiles from untru
 
 `format` is optional. When present, values must parse using that explicit format.
 
+### Cross-column comparison
+
+Compare two values from the same row using an explicit mode and operator:
+
+```json
+{
+  "type": "compare_columns",
+  "left_column": "start_date",
+  "right_column": "end_date",
+  "operator": "le",
+  "mode": "date"
+}
+```
+
+Operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`; modes are `numeric`, `date`, and `text`. Missing values are ignored so a separate `required` rule can express whether either field is mandatory. Non-empty malformed values fail validation. Missing or duplicate referenced columns are configuration errors.
+
 ## Conversion plans
 
 Conversion plans are never applied implicitly.
@@ -136,3 +152,7 @@ rowspect customers.csv \
 ## Column-name behavior
 
 Profiles reference columns by exact header name. If a configured header is missing or appears more than once, RowSpect reports a configuration error rather than guessing which column was intended.
+
+## CSV identifier behavior
+
+CSV loading preserves literal `NA`, `NULL`, mixed alphanumeric values, and padded identifiers such as `00123` as text. Unambiguous canonical numeric columns may still be inferred for convenience. Use the CLI `--preserve-text` option or the Streamlit **Preserve CSV text** option when every field must remain text. Explicit conversion to an integer or float is intentionally allowed to remove display formatting such as leading zeros; keep identifier columns as text when that formatting is meaningful.

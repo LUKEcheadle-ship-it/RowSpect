@@ -28,3 +28,8 @@ def test_csv_export_can_preserve_formula_text_when_explicitly_requested():
     raw = dataframe_to_csv(source, neutralize_formulas=False).decode("utf-8")
     assert "'=1+1" in safe
     assert "=1+1" in raw and "'=1+1" not in raw
+
+
+def test_formula_like_headers_are_neutralized():
+    source = pd.DataFrame([["value"]], columns=["=FORMULA"])
+    assert "'=FORMULA" in dataframe_to_csv(source).decode("utf-8").splitlines()[0]

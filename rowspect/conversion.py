@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
 from decimal import Decimal, InvalidOperation
 import math
+from typing import Any
 
 import pandas as pd
 
 SUPPORTED_TARGET_TYPES = {"text", "integer", "float", "boolean", "date", "datetime"}
+INT64_MIN = -(2**63)
+INT64_MAX = 2**63 - 1
 
 
 class ConversionError(ValueError):
@@ -81,6 +83,52 @@ def _convert_boolean(series: pd.Series) -> tuple[pd.Series, pd.Series]:
     return result, invalid
 
 
+def _decimal_from_value(value: Any) -> Decimal | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = Decimal(str(value).strip())
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() else None
+
+
+def _convert_numeric(series: pd.Series, target_type: str) -> tuple[pd.Series, pd.Series]:
+    missing = _missing_mask(series)
+    result_values: list[Any] = []
+    invalid = pd.Series(False, index=series.index)
+    for position, value in enumerate(series.tolist()):
+        if bool(missing.iloc[position]):
+            result_values.append(pd.NA)
+            continue
+        decimal_value = _decimal_from_value(value)
+        if decimal_value is None:
+            invalid.iloc[position] = True
+            result_values.append(pd.NA)
+            continue
+        if target_type == "integer":
+            if decimal_value != decimal_value.to_integral_value() or not (INT64_MIN <= decimal_value <= INT64_MAX):
+                invalid.iloc[position] = True
+                result_values.append(pd.NA)
+            else:
+                result_values.append(int(decimal_value))
+        else:
+            float_value = float(decimal_value)
+            # A float conversion is safe only when finite and its decimal
+            # representation retains the source value's meaningful precision.
+            if not math.isfinite(float_value) or Decimal(str(float_value)) != decimal_value:
+                invalid.iloc[position] = True
+                result_values.append(pd.NA)
+            else:
+                result_values.append(float_value)
+
+    if target_type == "integer":
+        result = pd.Series(result_values, index=series.index, dtype="Int64")
+    else:
+        result = pd.Series(result_values, index=series.index, dtype="Float64")
+    return result, invalid
+
+
 def _conversion_candidate(series: pd.Series, target_type: str) -> tuple[pd.Series, pd.Series]:
     missing = _missing_mask(series)
     non_missing = ~missing
@@ -91,34 +139,7 @@ def _conversion_candidate(series: pd.Series, target_type: str) -> tuple[pd.Serie
         return result, pd.Series(False, index=series.index)
 
     if target_type in {"integer", "float"}:
-        # Parse each value before casting. A float intermediate loses large
-        # integer digits when a column also contains missing values.
-        values: list[Any] = []
-        failures: list[bool] = []
-        for value, absent in zip(series.tolist(), missing.tolist()):
-            if absent:
-                values.append(pd.NA)
-                failures.append(False)
-                continue
-            try:
-                number = Decimal(str(value).strip())
-                if not number.is_finite():
-                    raise ValueError("non-finite value")
-                if target_type == "integer":
-                    if number != number.to_integral_value() or not -(2**63) <= number < 2**63:
-                        raise ValueError("not an exact Int64 value")
-                    parsed = int(number)
-                else:
-                    parsed = float(number)
-                    if not math.isfinite(parsed) or Decimal(str(parsed)) != number:
-                        raise ValueError("float would lose significant digits")
-                values.append(parsed)
-                failures.append(False)
-            except (InvalidOperation, ValueError, OverflowError, TypeError):
-                values.append(pd.NA)
-                failures.append(True)
-        dtype = "Int64" if target_type == "integer" else "Float64"
-        return pd.Series(values, index=series.index, dtype=dtype), pd.Series(failures, index=series.index)
+        return _convert_numeric(series, target_type)
 
     if target_type == "boolean":
         return _convert_boolean(series)

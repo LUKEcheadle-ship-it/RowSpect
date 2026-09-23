@@ -1,12 +1,25 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
-- Preserve leading-zero CSV identifiers, NA/NULL text codes, Excel text cells, and exact nullable integers during import.
-- Block lossy, non-finite, fractional, and out-of-range strict numeric conversions without uncaught casting errors.
-- Neutralize formula-like headers as well as cells on export.
-- Add recurring-file comparisons, numeric/date/text cross-column rules, and complete failing-row CSV exports in the UI and CLI.
-- Prevent CLI outputs from overwriting input files or one another.
+Qualified RowSpect 1.3.0 candidate; the manual XLSX walkthrough and native spreadsheet-app opening checks remain outstanding.
+
+### Added
+- descriptive current CSV/XLSX versus baseline comparison with deterministic JSON output
+- `compare_columns` validation for numeric, date, and text modes using `eq`, `ne`, `lt`, `le`, `gt`, and `ge`
+- deduplicated failing-row CSV export with source row numbers, failed rule IDs, and human-readable reasons
+- safer CSV inference that preserves padded identifiers and literal `NA`/`NULL` tokens, plus `--preserve-text`
+
+### Hardened
+- Decimal-based signed Int64 conversion bounds and fractional-value rejection
+- finite, loss-aware float conversion
+- formula-like header neutralization and CLI output-path collision protection
+
+### Qualification
+- Qualified source snapshot: `6018b7a5961c42040fc8c659311fc6479aa28f41` on `release/rowspect-1.3-20260923`.
+- Exact qualification gate: `python scripts/qualify_release.py --require-ui` — PASS; 107 tests passed, 0 failed, 0 skipped.
+- Compile, wheel build, public-release audit, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, and live Streamlit UI smoke passed. The release checklist retains the manual XLSX walkthrough and native spreadsheet-app opening checks as outstanding.
+- Benchmark: 100,000 rows x 20 columns in 1.452 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
 
 ## 1.2.0
 

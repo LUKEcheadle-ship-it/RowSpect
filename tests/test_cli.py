@@ -52,3 +52,17 @@ def test_cli_requires_path_without_doctor(capsys):
     code = run([])
     assert code == 2
     assert "dataset path is required" in capsys.readouterr().err
+
+
+def test_cli_comparison_and_input_overwrite_protection(tmp_path, capsys):
+    baseline = tmp_path / "baseline.csv"
+    current = tmp_path / "current.csv"
+    comparison_path = tmp_path / "comparison.json"
+    baseline.write_text("id,state\n001,A\n002,B\n", encoding="utf-8")
+    current.write_text("id,state\n001,A\n002,C\n003,C\n", encoding="utf-8")
+    assert run([str(current), "--baseline", str(baseline), "--comparison-json", str(comparison_path)]) == 0
+    assert "comparison=" in capsys.readouterr().out
+    assert '"row_count_change": 1' in comparison_path.read_text(encoding="utf-8")
+
+    assert run([str(current), "--json", str(current)]) == 2
+    assert "must not overwrite" in capsys.readouterr().err

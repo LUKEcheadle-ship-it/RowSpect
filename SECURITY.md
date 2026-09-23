@@ -12,7 +12,7 @@ RowSpect accepts `.csv` and `.xlsx` files up to 50 MB. Files are parsed by panda
 
 RowSpect has no project-operated upload service, account system, telemetry integration, or analytics SDK. The Streamlit app processes the selected file in the process where the app is running. If you expose Streamlit on a network interface, that deployment's access controls become your responsibility.
 
-Reusable 1.2 rule profiles contain configuration metadata only: profile name/description, column references, rule parameters, and optional conversion plans. They do not contain source dataset rows unless a user manually edits a profile file to add unrelated data.
+Reusable 1.3 rule profiles contain configuration metadata only: profile name/description, column references, rule parameters, and optional conversion plans. They do not contain source dataset rows unless a user manually edits a profile file to add unrelated data.
 
 ## Workbook resource limits
 
@@ -32,7 +32,11 @@ Type conversions are explicit and strict by default. RowSpect previews compatibi
 
 ## Spreadsheet formula safety
 
-Downloaded CSV/XLSX files neutralize text beginning with common spreadsheet formula prefixes (`=`, `+`, `-`, `@`) by default. Users may explicitly disable this when exact text preservation is required.
+Downloaded CSV/XLSX files neutralize text beginning with common spreadsheet formula prefixes (`=`, `+`, `-`, `@`) by default, including exported headers. Users may explicitly disable this when exact text preservation is required.
+
+## Failing-row exports
+
+Validation failure extracts include original source values plus source row number, failed rule IDs, and human-readable reasons. They can contain sensitive or identifying source data and should be handled, stored, and shared like the input dataset. The export is a review aid; it does not prove that non-exported rows are correct.
 
 ## Reporting a vulnerability
 

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from rowspect.validation import ValidationRuleError, normalize_rule, validate_dataframe
+from rowspect.validation import ValidationRuleError, failing_rows_dataframe, normalize_rule, validate_dataframe
 
 
 def test_validation_rules_cover_required_unique_range_allowed_regex_and_date():
@@ -75,3 +75,42 @@ def test_validation_passes_clean_dataset():
     )
     assert result["validation_passed"] is True
     assert result["failing_rule_count"] == 0
+
+
+def test_compare_columns_numeric_and_malformed_values_fail():
+    df = pd.DataFrame({"start": [1, 4, "bad", None], "end": [2, 3, 8, 9]})
+    result = validate_dataframe(
+        df,
+        [{"id": "ordered", "type": "compare_columns", "left_column": "start", "right_column": "end", "operator": "le", "mode": "numeric"}],
+    )
+    assert result["results"][0]["violation_count"] == 2
+    assert result["results"][0]["row_numbers"] == [3, 4]
+
+
+def test_compare_columns_supports_date_and_text_modes_and_config_errors():
+    df = pd.DataFrame({"a": ["2026-01-01", "not-a-date"], "b": ["2026-01-02", "2026-01-03"], "label": ["b", "a"]})
+    result = validate_dataframe(
+        df,
+        [
+            {"type": "compare_columns", "left_column": "a", "right_column": "b", "operator": "lt", "mode": "date"},
+            {"type": "compare_columns", "left_column": "label", "right_column": "missing", "operator": "eq", "mode": "text"},
+        ],
+    )
+    assert result["results"][0]["violation_count"] == 1
+    assert result["results"][1]["status"] == "configuration_error"
+
+
+def test_failing_rows_are_deduplicated_with_reasons():
+    df = pd.DataFrame({"id": [1, 1, 2], "age": [17, 17, 30]})
+    validation = validate_dataframe(
+        df,
+        [
+            {"id": "unique", "type": "unique", "column": "id"},
+            {"id": "adult", "type": "range", "column": "age", "min": 18},
+        ],
+    )
+    failing = failing_rows_dataframe(df, validation)
+    assert failing.shape[0] == 2
+    assert failing["_rowspect_source_row"].tolist() == [2, 3]
+    assert "unique" in failing.loc[0, "_rowspect_failed_rule_ids"]
+    assert "adult" in failing.loc[0, "_rowspect_failed_rule_ids"]

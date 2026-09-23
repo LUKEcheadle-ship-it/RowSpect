@@ -101,3 +101,18 @@ def test_non_strict_conversion_requires_explicit_opt_in_and_uses_missing_for_fai
     )
     assert results[0]["applied"] is True
     assert pd.isna(converted.loc[1, "amount"])
+
+
+def test_integer_conversion_rejects_int64_overflow():
+    df = pd.DataFrame({"value": ["9223372036854775807", "9223372036854775808"]})
+    converted, results = apply_type_conversions(df, [{"column": "value", "target_type": "integer"}])
+    assert results[0]["applied"] is False
+    assert results[0]["failure_count"] == 1
+    assert converted["value"].tolist() == df["value"].tolist()
+
+
+def test_float_conversion_rejects_non_finite_and_meaningfully_lossy_values():
+    df = pd.DataFrame({"value": ["NaN", "1e400", "12345678901234567"]})
+    _, results = apply_type_conversions(df, [{"column": "value", "target_type": "float"}])
+    assert results[0]["applied"] is False
+    assert results[0]["failure_count"] == 3

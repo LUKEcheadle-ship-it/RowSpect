@@ -8,13 +8,13 @@ import pandas as pd
 import streamlit as st
 
 from rowspect.clean import clean_dataframe, cleanup_summary
-from rowspect.comparison import compare_dataframes
 from rowspect.conversion import (
     ConversionError,
     SUPPORTED_TARGET_TYPES,
     analyze_type_conversion,
     apply_type_conversions,
 )
+from rowspect.comparison import compare_dataframes, comparison_json
 from rowspect.export import dataframe_to_csv, dataframe_to_xlsx
 from rowspect.insights import correlation_matrix, missingness_table, numeric_histogram, top_values
 from rowspect.io import MAX_FILE_BYTES, RowSpectIOError, get_excel_sheets, load_table
@@ -27,7 +27,7 @@ from rowspect.rule_profiles import (
     load_rule_profile,
 )
 from rowspect.ui import column_display_label, display_dataframe
-from rowspect.validation import ValidationRuleError, normalize_rule, validate_dataframe, failing_rows
+from rowspect.validation import ValidationRuleError, failing_rows_dataframe, normalize_rule, validate_dataframe
 
 st.set_page_config(page_title="RowSpect", page_icon="🔎", layout="wide")
 
@@ -58,8 +58,16 @@ with st.sidebar:
         help=f"RowSpect accepts .csv and .xlsx files up to {MAX_FILE_BYTES // (1024 * 1024)} MB.",
     )
     use_sample = st.checkbox("Use the built-in sample", value=False, disabled=uploaded is not None)
-    preserve_text = st.checkbox("Keep all CSV values as text", value=False,
-                                help="Disables numeric inference. Leading-zero IDs and NA/NULL text are always preserved. Empty cells are missing.")
+    preserve_text = st.checkbox(
+        "Preserve CSV text",
+        value=False,
+        help="Keep every CSV field as text. This is safest for identifiers and literal codes such as 00123, NA, and NULL.",
+    )
+    baseline_uploaded = st.file_uploader(
+        "Previous baseline (optional)",
+        type=["csv", "xlsx"],
+        help="Upload a previous file to compare row counts, schema, missingness, medians, categories, and quality score.",
+    )
     st.caption("Files are processed in the current Streamlit process. RowSpect contains no telemetry or upload backend.")
 
 if uploaded is not None:
@@ -115,6 +123,19 @@ except RowSpectIOError as exc:
 profile = profile_dataframe(dataframe)
 report_html = build_html_report(profile, source_name)
 
+comparison = None
+if baseline_uploaded is not None:
+    try:
+        baseline_dataframe = load_table(
+            baseline_uploaded.getvalue(),
+            baseline_uploaded.name,
+            sheet_name=sheet_name,
+            preserve_text=preserve_text,
+        )
+        comparison = compare_dataframes(baseline_dataframe, dataframe)
+    except (RowSpectIOError, ValueError) as exc:
+        st.error(f"Baseline could not be compared: {exc}")
+
 st.session_state.setdefault("rowspect_rules", [])
 st.session_state.setdefault("rowspect_conversions", [])
 st.session_state.setdefault("rowspect_profile_name", "My RowSpect profile")
@@ -146,12 +167,12 @@ else:
     issues_tab,
     columns_tab,
     explore_tab,
+    comparison_tab,
     validate_tab,
     convert_tab,
     clean_tab,
     export_tab,
-    compare_tab,
-) = st.tabs(["Overview", "Issues", "Columns", "Explore", "Validate", "Convert", "Clean", "Export", "Compare"])
+) = st.tabs(["Overview", "Issues", "Columns", "Explore", "Compare", "Validate", "Convert", "Clean", "Export"])
 
 with overview_tab:
     left, right = st.columns([1.45, 0.55])
@@ -272,6 +293,31 @@ with explore_tab:
         if not values.empty:
             st.bar_chart(values.set_index("value"))
 
+with comparison_tab:
+    st.subheader("Compare with a previous file")
+    st.caption("This is descriptive change detection for review, not statistical significance testing.")
+    if comparison is None:
+        st.info("Upload a previous CSV or Excel file in the sidebar to see file-to-file changes.")
+    else:
+        metrics = st.columns(4)
+        metrics[0].metric("Rows changed", f"{comparison['row_count_change']:+,}")
+        metrics[1].metric("Columns added", len(comparison["columns_added"]))
+        metrics[2].metric("Columns removed", len(comparison["columns_removed"]))
+        metrics[3].metric("Quality score change", f"{comparison['quality_score_change']:+.1f}")
+        if comparison["columns_added"]:
+            st.write("**Added columns:** " + ", ".join(comparison["columns_added"]))
+        if comparison["columns_removed"]:
+            st.write("**Removed columns:** " + ", ".join(comparison["columns_removed"]))
+        comparison_rows = pd.DataFrame(comparison["column_changes"])
+        if not comparison_rows.empty:
+            st.dataframe(display_dataframe(comparison_rows), hide_index=True, width="stretch")
+        st.download_button(
+            "Download comparison JSON",
+            data=comparison_json(comparison).encode("utf-8"),
+            file_name=f"{Path(source_name).stem}-rowspect-comparison.json",
+            mime="application/json",
+        )
+
 with validate_tab:
     st.subheader("Custom validation")
     st.caption("Define what good data means for this file, then save the checks as a reusable JSON profile.")
@@ -333,11 +379,26 @@ with validate_tab:
     }
 
     if rule_type == "compare_columns":
-        rule_payload["other_column"] = str(st.selectbox("Compare with column", list(dataframe.columns)))
-        rule_payload["operator"] = st.selectbox("Operator", ["le", "ge", "eq", "ne", "lt", "gt"],
-                                               format_func=lambda op: {"le": "≤", "ge": "≥", "eq": "=", "ne": "≠", "lt": "<", "gt": ">"}[op])
-        rule_payload["comparison"] = st.selectbox("Compare as", ["numeric", "date", "text"])
-        st.caption("Missing values are skipped; add required rules to reject them. Numeric comparisons preserve integer precision.")
+        compare_columns = st.columns(3)
+        with compare_columns[0]:
+            right_position = st.selectbox(
+                "Compare to column",
+                list(range(dataframe.shape[1])),
+                key="compare_right_position",
+                format_func=lambda idx: f"{idx + 1} · {column_display_label(dataframe.columns[idx], idx + 1)}",
+            )
+        with compare_columns[1]:
+            compare_operator = st.selectbox("Operator", ["eq", "ne", "lt", "le", "gt", "ge"], key="compare_operator")
+        with compare_columns[2]:
+            compare_mode = st.selectbox("Mode", ["numeric", "date", "text"], key="compare_mode")
+        rule_payload.update(
+            {
+                "left_column": rule_column,
+                "right_column": str(dataframe.columns[right_position]),
+                "operator": compare_operator,
+                "mode": compare_mode,
+            }
+        )
     elif rule_type == "range":
         bounds = st.columns(2)
         with bounds[0]:
@@ -428,15 +489,19 @@ with validate_tab:
             result_rows.append(row)
         st.dataframe(display_dataframe(pd.DataFrame(result_rows)), hide_index=True, width="stretch")
         st.caption("Reported row numbers use spreadsheet/CSV-style numbering: header is row 1, first data row is row 2.")
-        if not validation["configuration_error_count"]:
-            failed = failing_rows(dataframe, current_rules)
-            st.download_button("Download failing rows CSV", dataframe_to_csv(failed),
-                               file_name=f"{Path(source_name).stem}-failing-rows.csv", mime="text/csv")
         st.download_button(
             "Download validation results JSON",
             data=json.dumps(validation, indent=2, ensure_ascii=False).encode("utf-8"),
             file_name=f"{Path(source_name).stem}-rowspect-validation.json",
             mime="application/json",
+        )
+        failing_rows = failing_rows_dataframe(dataframe, validation)
+        st.download_button(
+            "Download failing rows CSV",
+            data=dataframe_to_csv(failing_rows),
+            file_name=f"{Path(source_name).stem}-rowspect-failing-rows.csv",
+            mime="text/csv",
+            help="Contains original source values plus source row number, failed rule IDs, and human-readable reasons.",
         )
     else:
         st.info("Add a rule or load a saved profile to validate this dataset against business-specific expectations.")
@@ -641,27 +706,3 @@ with export_tab:
             width="stretch",
         )
     st.caption("The generic exported profile contains aggregate quality results and column statistics, not the full source dataset.")
-
-with compare_tab:
-    st.subheader("Compare a recurring delivery")
-    st.caption("Upload an earlier file to compare schema, missingness, categories, and numeric medians. These are descriptive changes for review.")
-    baseline_upload = st.file_uploader("Earlier CSV or Excel file", type=["csv", "xlsx"], key="baseline_upload")
-    if baseline_upload is not None:
-        try:
-            baseline_bytes = baseline_upload.getvalue()
-            baseline_sheet = None
-            if Path(baseline_upload.name).suffix.lower() == ".xlsx":
-                baseline_sheet = st.selectbox("Earlier worksheet", get_excel_sheets(baseline_bytes))
-            baseline = load_table(baseline_bytes, baseline_upload.name, sheet_name=baseline_sheet, preserve_text=preserve_text)
-            comparison = compare_dataframes(baseline, dataframe)
-            metrics = st.columns(3)
-            metrics[0].metric("Earlier rows", comparison["baseline_rows"])
-            metrics[1].metric("Current rows", comparison["current_rows"], delta=comparison["row_change"])
-            metrics[2].metric("Quality score change", comparison["quality_score_change"])
-            st.write("Added columns:", comparison["added_columns"] or "None")
-            st.write("Removed columns:", comparison["removed_columns"] or "None")
-            st.dataframe(display_dataframe(pd.DataFrame(comparison["columns"])), hide_index=True, width="stretch")
-            st.download_button("Download comparison JSON", json.dumps(comparison, indent=2, allow_nan=False).encode(),
-                               file_name="rowspect-comparison.json", mime="application/json")
-        except (RowSpectIOError, ValueError) as exc:
-            st.error(str(exc))
