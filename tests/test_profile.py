@@ -77,7 +77,7 @@ def test_comparison_reports_schema_missingness_median_and_new_categories():
 
     baseline = pd.DataFrame({"amount": [10, 20], "state": ["AL", "GA"]})
     current = pd.DataFrame({"amount": [20, 40, None], "state": ["AL", "TX", "TX"], "new": [1, 2, 3]})
-    result = compare_dataframes(current, baseline)
+    result = compare_dataframes(baseline, current)
     assert result["row_count_change"] == 1
     assert result["columns_added"] == ["new"]
     assert result["quality_score_change"] < 0

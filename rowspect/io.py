@@ -202,7 +202,14 @@ def load_table(
         else:
             _validate_xlsx_archive(data)
             raw_headers = _xlsx_raw_headers(data, sheet_name)
-            df = pd.read_excel(BytesIO(data), sheet_name=sheet_name or 0, engine="openpyxl")
+            df = pd.read_excel(
+                BytesIO(data),
+                sheet_name=sheet_name or 0,
+                engine="openpyxl",
+                dtype=object,
+                keep_default_na=False,
+                na_values=[""],
+            )
             if raw_headers is not None and len(raw_headers) == df.shape[1]:
                 df.columns = raw_headers
     except csv.Error as exc:
@@ -219,4 +226,12 @@ def load_table(
 
     if df.shape[1] == 0:
         raise RowSpectIOError("No columns were found in this file.")
+    if extension == ".xlsx":
+        # Excel distinguishes numeric cells from text cells. Keep numeric-looking
+        # identifiers stored as text, while normalizing genuinely numeric columns.
+        for position in range(df.shape[1]):
+            series = df.iloc[:, position]
+            if not any(isinstance(value, str) for value in series.dropna()):
+                df.isetitem(position, series.convert_dtypes())
+        return df
     return df

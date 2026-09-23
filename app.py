@@ -132,8 +132,8 @@ if baseline_uploaded is not None:
             sheet_name=sheet_name,
             preserve_text=preserve_text,
         )
-        comparison = compare_dataframes(dataframe, baseline_dataframe)
-    except RowSpectIOError as exc:
+        comparison = compare_dataframes(baseline_dataframe, dataframe)
+    except (RowSpectIOError, ValueError) as exc:
         st.error(f"Baseline could not be compared: {exc}")
 
 st.session_state.setdefault("rowspect_rules", [])

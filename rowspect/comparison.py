@@ -54,13 +54,17 @@ def _category_examples(current: pd.Series, baseline: pd.Series, limit: int = 5) 
     return sorted(values)[:limit]
 
 
-def compare_dataframes(current: pd.DataFrame, baseline: pd.DataFrame) -> dict[str, Any]:
+def compare_dataframes(baseline: pd.DataFrame, current: pd.DataFrame) -> dict[str, Any]:
     """Describe deterministic, review-oriented changes from baseline to current.
 
     This is descriptive change detection, not statistical significance testing.
     Column matching uses exact stringified header names; duplicate names are
-    reported as a schema concern and are not guessed apart.
+    rejected rather than guessed apart.
     """
+    for frame in (baseline, current):
+        if pd.Index([str(column) for column in frame.columns]).duplicated().any():
+            raise ValueError("Rename duplicate column names before comparing files.")
+
     current_profile = profile_dataframe(current)
     baseline_profile = profile_dataframe(baseline)
     current_columns = _ordered_unique(current.columns)
@@ -88,6 +92,11 @@ def compare_dataframes(current: pd.DataFrame, baseline: pd.DataFrame) -> dict[st
         baseline_profile_column = baseline_profile["columns"][baseline_positions[0]]
         current_dtype = str(current_series.dtype)
         baseline_dtype = str(baseline_series.dtype)
+        new_categories = _category_examples(current_series, baseline_series, limit=21)
+        baseline_missing = (
+            float(baseline_series.isna().mean() * 100) if len(baseline_series) else None
+        )
+        current_missing = float(current_series.isna().mean() * 100) if len(current_series) else None
         change.update(
             {
                 "status": "changed" if current_dtype != baseline_dtype else "unchanged",
@@ -101,7 +110,18 @@ def compare_dataframes(current: pd.DataFrame, baseline: pd.DataFrame) -> dict[st
                 ),
                 "baseline_missing_pct": baseline_profile_column["missing_pct"],
                 "current_missing_pct": current_profile_column["missing_pct"],
-                "new_category_examples": _category_examples(current_series, baseline_series),
+                "new_category_examples": new_categories[:5],
+                # Keep the 1.2 public comparison keys available to existing callers.
+                "missing_pct_before": baseline_missing,
+                "missing_pct_after": current_missing,
+                "missing_percentage_point_change": (
+                    round(current_missing - baseline_missing, 3)
+                    if baseline_missing is not None and current_missing is not None
+                    else None
+                ),
+                "new_categories": new_categories[:20],
+                "new_category_count": len(new_categories),
+                "categories_truncated": len(new_categories) > 20,
             }
         )
         if current_profile_column["median"] is not None or baseline_profile_column["median"] is not None:
@@ -113,6 +133,13 @@ def compare_dataframes(current: pd.DataFrame, baseline: pd.DataFrame) -> dict[st
                     "current_numeric_median": _json_value(current_median),
                     "numeric_median_change": (
                         round(float(current_median) - float(baseline_median), 12)
+                        if baseline_median is not None and current_median is not None
+                        else None
+                    ),
+                    "baseline_median": _json_value(baseline_median),
+                    "current_median": _json_value(current_median),
+                    "median_change": (
+                        float(current_median) - float(baseline_median)
                         if baseline_median is not None and current_median is not None
                         else None
                     ),
@@ -140,6 +167,15 @@ def compare_dataframes(current: pd.DataFrame, baseline: pd.DataFrame) -> dict[st
             float(current_profile["quality_score"]) - float(baseline_profile["quality_score"]), 1
         ),
     }
+    # Retain the original 1.2 result schema while exposing the clearer 1.3 names.
+    result.update(
+        {
+            "row_change": result["row_count_change"],
+            "added_columns": result["columns_added"],
+            "removed_columns": result["columns_removed"],
+            "columns": changes,
+        }
+    )
     return result
 
 

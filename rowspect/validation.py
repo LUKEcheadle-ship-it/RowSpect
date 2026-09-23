@@ -121,7 +121,7 @@ def normalize_rule(rule: dict[str, Any], *, position: int = 0) -> dict[str, Any]
                 "compare_columns operator must be one of: "
                 + ", ".join(sorted(SUPPORTED_COMPARISON_OPERATORS))
             )
-        mode = str(rule.get("mode", "numeric")).strip().lower()
+        mode = str(rule.get("mode", rule.get("comparison", "numeric"))).strip().lower()
         if mode not in SUPPORTED_COMPARISON_MODES:
             raise ValidationRuleError(
                 "compare_columns mode must be one of: "
@@ -471,3 +471,23 @@ def failing_rows_dataframe(df: pd.DataFrame, validation: dict[str, Any]) -> pd.D
     return pd.concat([source_rows, metadata], axis=1)
 
 build_failing_rows = failing_rows_dataframe
+
+
+def failing_rows(df: pd.DataFrame, rules: list[dict[str, Any]]) -> pd.DataFrame:
+    """Backward-compatible 1.2 API for exporting rows that fail validation."""
+    validation = validate_dataframe(df, rules)
+    if validation["configuration_error_count"]:
+        raise ValidationRuleError(
+            "Correct missing or ambiguous rule columns before exporting failing rows."
+        )
+    result = failing_rows_dataframe(df, validation)
+    result = result.rename(
+        columns={
+            "_rowspect_source_row": "rowspect_source_row",
+            "_rowspect_failed_rule_ids": "rowspect_rule_ids",
+            "_rowspect_failure_reasons": "rowspect_reasons",
+        }
+    )
+    if "rowspect_rule_ids" in result:
+        result["rowspect_rule_ids"] = result["rowspect_rule_ids"].str.replace(", ", "; ", regex=False)
+    return result

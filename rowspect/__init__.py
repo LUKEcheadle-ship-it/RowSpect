@@ -22,7 +22,13 @@ from rowspect.rule_profiles import (
     dump_rule_profile,
     load_rule_profile,
 )
-from rowspect.validation import ValidationRuleError, build_failing_rows, failing_rows_dataframe, validate_dataframe
+from rowspect.validation import (
+    ValidationRuleError,
+    build_failing_rows,
+    failing_rows,
+    failing_rows_dataframe,
+    validate_dataframe,
+)
 
 __all__ = [
     "ConversionError",
@@ -44,6 +50,7 @@ __all__ = [
     "dataframe_to_xlsx",
     "dump_rule_profile",
     "export_safe_dataframe",
+    "failing_rows",
     "failing_rows_dataframe",
     "get_excel_sheets",
     "load_rule_profile",

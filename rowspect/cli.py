@@ -171,8 +171,8 @@ def run(argv: list[str] | None = None) -> int:
                 sheet_name=args.sheet,
                 preserve_text=args.preserve_text,
             )
-            comparison = compare_dataframes(df, baseline)
-        except (OSError, RowSpectIOError) as exc:
+            comparison = compare_dataframes(baseline, df)
+        except (OSError, RowSpectIOError, ValueError) as exc:
             print(f"RowSpect: could not load baseline {args.baseline}: {exc}", file=sys.stderr)
             return 2
 
