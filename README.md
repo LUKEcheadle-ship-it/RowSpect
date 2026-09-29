@@ -52,8 +52,6 @@ rowspect sample_data/messy_customers.csv
 
 RowSpect 1.3.0 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
 
-> **Next visual milestone:** add a real screenshot captured from the built-in synthetic sample so visitors can see the quality dashboard before reading the deeper implementation details.
-
 ## Why this project
 
 RowSpect is a complete small data product rather than a notebook-only analysis:
@@ -68,16 +66,6 @@ RowSpect is a complete small data product rather than a notebook-only analysis:
 - command-line tooling
 - unit-tested core logic
 - privacy-conscious local processing
-
-## 1.3 capability map
-
-| Workflow | What RowSpect demonstrates |
-| --- | --- |
-| Inspect | deterministic profiling, quality score, missingness, duplicates, types, and outlier signals |
-| Validate | reusable rules, cross-column comparisons, and row-level failure reasons |
-| Compare | current-vs-baseline schema, rows, missingness, medians, categories, and score changes |
-| Convert | strict text/integer/float/boolean/date/datetime conversion with bounds and precision checks |
-| Clean and export | conservative cleanup, failing-row CSVs, formula-safe CSV/XLSX, JSON, and HTML reports |
 
 ## New in 1.2
 
