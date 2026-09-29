@@ -1,14 +1,58 @@
 # RowSpect
 
 [![CI](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
+![Version](https://img.shields.io/badge/Version-1.3.0-0A7C86)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Catch spreadsheet problems before they reach a dashboard, model, report, or decision.**
 
-Local-first CSV/XLSX data quality profiling, validation, safe cleanup, comparison, and reusable rule profiles.
+RowSpect is a local-first CSV/XLSX data-quality application for profiling messy data, defining business validation rules, comparing datasets, safely converting types, and exporting cleaned files and standalone reports.
 
-RowSpect turns a messy spreadsheet into an immediate, explainable quality review. Open a `.csv` or `.xlsx` file, inspect structural problems, explore the data, define business-specific validation rules, preview safe type conversions, then export a cleaned file or standalone report.
+### At a glance
+
+**93 automated tests** · **100,000 × 20 benchmark: 1.923s** · **CSV + Excel** · **CLI + Streamlit UI** · **No cloud upload or telemetry**
+
+| Workflow | What RowSpect does |
+| --- | --- |
+| **Inspect** | Profile missing values, duplicates, data types, structural issues, and potential outliers |
+| **Validate** | Apply reusable business rules and show the exact source rows that fail |
+| **Compare** | Detect schema, row-count, missingness, category, median, and quality-score changes |
+| **Convert** | Preview strict text/integer/float/boolean/date/datetime conversions before applying them |
+| **Clean & export** | Produce conservative CSV/XLSX cleanup, failing-row exports, JSON profiles, and HTML reports |
+
+```mermaid
+flowchart LR
+    A[CSV / XLSX] --> B[Inspect]
+    B --> C[Validate]
+    C --> D[Compare]
+    D --> E[Convert]
+    E --> F[Clean + Export]
+```
+
+### Try it in under a minute
+
+Requires **Python 3.11+**.
+
+```bash
+git clone https://github.com/LUKEcheadle-ship-it/RowSpect.git
+cd RowSpect
+python -m venv .venv
+# activate the environment for your shell
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Or use the CLI:
+
+```bash
+pip install -e .
+rowspect sample_data/messy_customers.csv
+```
 
 RowSpect 1.3.0 is deliberately local and small: there is **no RowSpect cloud upload, account system, telemetry, analytics SDK, or AI API**.
+
+> **Next visual milestone:** add a real screenshot captured from the built-in synthetic sample so visitors can see the quality dashboard before reading the deeper implementation details.
 
 ## Why this project
 
