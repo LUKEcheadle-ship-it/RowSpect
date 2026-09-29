@@ -1,5 +1,7 @@
 # RowSpect
 
+[![CI](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/ci.yml/badge.svg)](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/ci.yml)
+
 **Catch spreadsheet problems before they reach a dashboard, model, report, or decision.**
 
 Local-first CSV/XLSX data quality profiling, validation, safe cleanup, comparison, and reusable rule profiles.
