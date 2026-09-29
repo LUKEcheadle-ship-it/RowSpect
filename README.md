@@ -9,6 +9,8 @@
 
 RowSpect is a local-first CSV/XLSX data-quality application for profiling messy data, defining business validation rules, comparing datasets, safely converting types, and exporting cleaned files and standalone reports.
 
+![RowSpect dashboard using the built-in synthetic sample](docs/assets/rowspect-dashboard.png)
+
 ### At a glance
 
 **93 automated tests** · **100,000 × 20 benchmark: 1.923s** · **CSV + Excel** · **CLI + Streamlit UI** · **No cloud upload or telemetry**
