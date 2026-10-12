@@ -1,30 +1,41 @@
 # Release checklist
 
-A public RowSpect release should not be advertised until all required gates pass. This checklist applies to the **1.3.0** release candidate. Historical 1.2 qualification evidence is not reused as 1.3 evidence.
+A public RowSpect release should not be advertised until all required gates pass. This checklist applies to source version **1.3.0**. Historical evidence belongs to the exact commit that was checked, not every later commit. Publication remains tracked in [issue #3](https://github.com/LUKEcheadle-ship-it/RowSpect/issues/3).
 
-## Required
+## Recorded candidate evidence
 
-- [x] `python scripts/qualify_release.py --require-ui` passes on the final candidate
-- [x] all automated tests pass on the final candidate
-- [x] package version, README, and changelog agree
-- [x] CLI generic profiling produces JSON and HTML outputs
-- [x] CLI reusable-profile validation produces validation JSON
-- [x] CLI comparison produces deterministic comparison JSON
-- [x] CLI failing-row export is deduplicated and includes source row/reasons
-- [x] CLI strict profile conversions are exercised, including Int64 and float safety
-- [x] Streamlit server health smoke passes
-- [ ] manual browser walkthrough passes using both the built-in sample and one XLSX workbook — automated UI smoke passed; full manual XLSX walkthrough remains to be done
-- [ ] CSV and XLSX cleaned downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
-- [ ] converted CSV and XLSX downloads open successfully in a spreadsheet application — blocker: no native spreadsheet application is installed or exposed for verification in this environment
-- [x] reusable profile serialization can be reloaded and produces the same rules/conversions — explicit qualification gate plus unit coverage
-- [x] repository contains no private datasets, credentials, secrets, or machine-specific paths
-- [x] security and deployment docs match actual behavior
+The checked entries below preserve the prior candidate record described in [LAUNCH.md](LAUNCH.md), at `6018b7a5961c42040fc8c659311fc6479aa28f41`. They are not new test results for the current branch.
 
-## Manual UI walkthrough
+- [x] `python scripts/qualify_release.py --require-ui` passed on the recorded candidate
+- [x] all automated tests passed on the recorded candidate
+- [x] package version, README, and changelog agreed on version 1.3.0
+- [x] CLI generic profiling produced JSON and HTML outputs
+- [x] CLI reusable-profile validation produced validation JSON
+- [x] CLI comparison produced deterministic comparison JSON
+- [x] CLI failing-row export was deduplicated and included source row/reasons
+- [x] CLI strict profile conversions were exercised, including Int64 and float safety
+- [x] Streamlit server health smoke passed
+- [x] reusable profile serialization reloaded with the same rules/conversions
+- [x] public-release audit passed on the recorded candidate
+- [x] security and deployment docs were reviewed against candidate behavior
 
-The built-in sample walkthrough was completed on the final candidate across Overview, Issues, Columns, Explore, Validate, Convert, Clean, Export, and Compare. The items below remain unchecked when they require an uploaded XLSX, a downloaded artifact, or a native spreadsheet application.
+## Required for the selected release commit
 
-Check:
+Record the selected SHA and evidence locations before checking these items. A missing result is still pending, not a pass or proof of an application defect.
+
+- [ ] exact release commit, package version, license, README, and changelog verified
+- [ ] `python scripts/qualify_release.py --require-ui` passes on that exact commit, with test count and environment recorded
+- [ ] installation, sample workflow, and documented Docker usage verified
+- [ ] manual browser walkthrough passes using the built-in sample, a CSV, and an XLSX workbook
+- [ ] cleaned CSV and XLSX downloads open successfully in a native spreadsheet application
+- [ ] converted CSV and XLSX downloads open successfully in a native spreadsheet application
+- [ ] final privacy, security, and release evidence reviewed
+
+The recorded environment did not provide a native spreadsheet application. Do not mark the workbook-opening checks complete based only on programmatic archive reloads or an HTTP smoke test.
+
+## Manual UI walkthrough record
+
+Earlier notes report a built-in-sample walkthrough. Preserve the specific checked items below; that broad description does not certify the unchecked interactions. Entries explicitly labeled automated are supporting automated evidence, not manual checks. Recheck the required workflows on the selected release commit and record the result.
 
 - [x] empty landing page and sample toggle
 - [ ] CSV upload
@@ -51,17 +62,16 @@ Check:
 - [ ] numeric header `0` displays as `0` in Validate and Convert selectors
 - [x] Compare tab empty state explains how to load a baseline
 - [ ] Compare tab with an uploaded baseline and exported JSON
-- [x] CSV identifier safety and Preserve CSV text behavior are verified (automated gate)
-- [x] cross-column numeric/date/text modes and all operators are verified (automated tests)
+- [x] CSV identifier safety and Preserve CSV text behavior (automated gate)
+- [x] cross-column numeric/date/text modes and all operators (automated tests)
 - [x] failing-row CSV warning about original source data is visible
 
-## Publish
+## Presentation and publication
 
-Only after every required gate above passes:
+- [x] repository is public
+- [x] real synthetic-data dashboard screenshot is stored at `docs/assets/rowspect-dashboard.png` and referenced from the README
+- [ ] exact-candidate qualification and outstanding manual checks reviewed
+- [ ] repository owner explicitly authorizes publication
+- [ ] versioned `v1.3.0` GitHub Release published with accurate notes and matching artifacts
 
-- make the repository public
-- create/tag the release
-- add screenshots or a short demo GIF to the README
-- announce the project
-
-Record the exact final test count, qualification command, benchmark environment, and unavailable checks in `CHANGELOG.md` and `docs/LAUNCH.md`. Do not publish a GitHub Release from this repository until the final qualification evidence has been reviewed.
+Record the exact final test count, qualification command, benchmark environment, and unavailable checks in `CHANGELOG.md` and `docs/LAUNCH.md` without replacing historical results with unexecuted claims. A merged source change, passing CI run, or screenshot does not by itself authorize publication.

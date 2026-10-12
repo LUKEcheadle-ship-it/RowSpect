@@ -1,6 +1,6 @@
 # RowSpect 1.3 launch notes
 
-This file is the release-note template for the final 1.3 candidate. It must contain only evidence from the exact candidate that passed qualification.
+This file separates recorded candidate evidence from the checks still needed for a versioned public release. Publication is tracked in [issue #3](https://github.com/LUKEcheadle-ship-it/RowSpect/issues/3); source availability is not the same as publishing a package or GitHub Release.
 
 ## Release themes
 
@@ -11,7 +11,9 @@ This file is the release-note template for the final 1.3 candidate. It must cont
 - strict integer and float conversion hardening
 - formula-safe exports, output collision protection, and existing local-first file limits
 
-## Qualification evidence
+## Recorded qualification snapshot
+
+The following results are retained from the named historical candidate. They are not a fresh execution or qualification of subsequent commits.
 
 - Version: 1.3.0
 - Branch: `release/rowspect-1.3-20260923`
@@ -26,20 +28,20 @@ This file is the release-note template for the final 1.3 candidate. It must cont
 - Public-release audit: passed
 - Benchmark: `RowSpect benchmark: 100,000 rows x 20 columns in 1.452s` on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0
 
-The remaining checks are explicitly listed in `docs/RELEASE_CHECKLIST.md`: a manual XLSX browser walkthrough and opening generated workbooks in a native spreadsheet application were unavailable in the qualification environment. Do not treat this source merge as a published package or GitHub Release.
+The benchmark is an observed run, not a performance guarantee. The changelog records the same snapshot. Earlier README figures of 93 tests and 1.923 seconds did not identify their exact candidate there; they must not be combined with this snapshot or presented as current qualification.
+
+The remaining checks are explicitly listed in [the release checklist](RELEASE_CHECKLIST.md): a manual XLSX browser walkthrough and opening generated workbooks in a native spreadsheet application were unavailable in the qualification environment. Programmatic pandas/openpyxl reloads and an HTTP server smoke do not substitute for those checks.
 
 The historical RowSpect 1.2 result of 82/82 tests remains historical evidence only. It is not a 1.3 result.
 
 ## Screenshots
 
-No screenshot files are stored in the repository yet. The qualified app was inspected with synthetic data during this pass; before public launch, save these real-app captures under `docs/assets/` and reference them from the README:
+The repository already contains a [real dashboard screenshot](assets/rowspect-dashboard.png), referenced from the README and merged through [PR #13](https://github.com/LUKEcheadle-ship-it/RowSpect/pull/13). Do not recreate or replace it with a mockup.
 
-1. Overview with the quality score and issue summary.
-2. Validate with visible rule failures and row numbers.
-3. Compare with a baseline/current change summary.
-
-Do not use mockups or fabricated screenshots as application evidence.
+Additional real-app captures using synthetic data can document Validate rule failures and Compare changes. These would supplement the existing screenshot; their absence does not mean the existing screenshot is missing. A screenshot is presentation evidence, not proof that every manual workbook check passed.
 
 ## Release boundary
+
+Before publication, select the exact release commit, run `python scripts/qualify_release.py --require-ui`, record its results and environment separately from the historical snapshot, and complete the outstanding manual checks. The CI release job also uses `--require-ui`, which refuses to skip the smoke check when Streamlit is unavailable.
 
 Prepare but do not publish a GitHub Release until the final qualification evidence is reviewed and the repository owner explicitly authorizes publication.

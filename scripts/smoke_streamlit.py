@@ -57,27 +57,32 @@ def main() -> int:
         stderr=subprocess.STDOUT,
         text=True,
     )
+    failure: Exception | None = None
+    output = ""
     try:
         _wait_for(f"http://127.0.0.1:{port}/_stcore/health")
         root = _wait_for(f"http://127.0.0.1:{port}/")
         if not root:
             raise RuntimeError("Streamlit root page returned an empty response.")
-        print(f"RowSpect UI smoke PASS on 127.0.0.1:{port}")
-        return 0
     except Exception as exc:
-        print(f"RowSpect UI smoke FAIL: {exc}", file=sys.stderr)
-        if process.stdout:
-            output = process.stdout.read()
-            if output:
-                print(output[-4000:], file=sys.stderr)
-        return 1
+        failure = exc
     finally:
+        # A live server keeps stdout open. Stop it before collecting logs;
+        # reading stdout to EOF first can hang precisely when a check fails.
         process.terminate()
         try:
-            process.wait(timeout=5)
+            output, _ = process.communicate(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait(timeout=5)
+            output, _ = process.communicate(timeout=5)
+
+    if failure is not None:
+        print(f"RowSpect UI smoke FAIL: {failure}", file=sys.stderr)
+        if output:
+            print(output[-4000:], file=sys.stderr)
+        return 1
+    print(f"RowSpect UI smoke PASS on 127.0.0.1:{port}")
+    return 0
 
 
 if __name__ == "__main__":

@@ -9,3 +9,8 @@ venv/
 *.xls
 *.csv
 !sample_data/*.csv
+
+# Generated Python package artifacts (not source)
+build/
+dist/
+*.egg-info/

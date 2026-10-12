@@ -13,7 +13,7 @@ RowSpect is a local-first CSV/XLSX data-quality application for profiling messy 
 
 ### At a glance
 
-**93 automated tests** · **100,000 × 20 benchmark: 1.923s** · **CSV + Excel** · **CLI + Streamlit UI** · **No cloud upload or telemetry**
+**Automated release checks** · **CSV + Excel** · **CLI + Streamlit UI** · **No cloud upload or telemetry**
 
 | Workflow | What RowSpect does |
 | --- | --- |
@@ -134,9 +134,13 @@ rowspect customers.csv \
 
 Comparison is descriptive change detection, not statistical significance testing, and the generic quality score is a review aid—not proof that a dataset is correct.
 
-## 1.3 release-candidate evidence
+## 1.3 release status and evidence
 
-The exact candidate passed `python scripts/qualify_release.py --require-ui`: 93 tests passed with 0 failures and 0 skips; compile, wheel build, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, reusable-profile round-trip, public-release audit, and live Streamlit smoke passed. The observed benchmark was 100,000 rows × 20 columns in 1.923 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. See [`docs/LAUNCH.md`](docs/LAUNCH.md) for the release boundary and screenshot capture notes.
+The source version is **1.3.0**. Versioned publication is tracked separately in [release issue #3](https://github.com/LUKEcheadle-ship-it/RowSpect/issues/3); a source merge or version badge is not proof that a package or GitHub Release has been published.
+
+[`docs/LAUNCH.md`](docs/LAUNCH.md) records the historical qualification of commit `6018b7a5961c42040fc8c659311fc6479aa28f41`: **107 tests passed**, and the 100,000-row × 20-column benchmark took **1.452 seconds** in the documented Windows environment. Those results belong to that snapshot, not every later commit, and the timing is not a performance guarantee.
+
+The CI release job requires `python scripts/qualify_release.py --require-ui`, so a missing Streamlit dependency cannot silently skip the HTTP smoke check. That check proves the server responds; it does not replace an interactive workbook walkthrough. The selected final release commit still needs its own recorded qualification and the manual XLSX/native spreadsheet checks in [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
 
 ## Production hardening
 
