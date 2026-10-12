@@ -1,0 +1,70 @@
+name: Public project review workspace
+
+on:
+  push:
+    branches: [review/public-project-checkouts-20261011]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: LUKEcheadle-ship-it/RowSpect
+          ref: c8a278bafbbd5c824d0e4edcfcbe50d2dd90135d
+          path: RowSpect
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: LUKEcheadle-ship-it/quietward
+          ref: e93c0f3a80275e00e24de3ca965151fdf2785ceb
+          path: quietward
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: LUKEcheadle-ship-it/quietward-response
+          ref: 5cf817422091a6e594e6b4e69b2c357a404ba1fe
+          path: quietward-response
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Export public Git objects only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p snapshot/bundles snapshot/wheels
+          for repo in RowSpect quietward quietward-response; do
+            git -C "$repo" bundle create "$GITHUB_WORKSPACE/snapshot/bundles/$repo.bundle" --all HEAD
+            git -C "$repo" bundle verify "$GITHUB_WORKSPACE/snapshot/bundles/$repo.bundle"
+          done
+      - name: Download offline review dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip wheel --wheel-dir snapshot/wheels -r RowSpect/requirements.txt -r quietward-response/backend/requirements.txt 'build<2' 'psutil<8' 'playwright<2'
+          python -m pip wheel --wheel-dir snapshot/wheels ./quietward
+      - name: Write provenance and checksums
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, platform, subprocess
+          root = pathlib.Path('snapshot')
+          refs = {name: subprocess.check_output(['git', '-C', name, 'rev-parse', 'HEAD'], text=True).strip() for name in ['RowSpect', 'quietward', 'quietward-response']}
+          files = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file()}
+          (root / 'manifest.json').write_text(json.dumps({'purpose': 'public source and offline test dependencies; no credentials or runtime state', 'python': platform.python_version(), 'refs': refs, 'sha256': files}, indent=2) + '\n', encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-project-review-workspace
+          path: snapshot/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
