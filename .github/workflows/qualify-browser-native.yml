@@ -23,9 +23,11 @@ jobs:
           gzip -dc .review/rowspect-candidate.patch.gz > "$RUNNER_TEMP/rowspect.patch"
           echo "532a3705eb32b757afc04e6d40cebe6abf07b4738021edbe0a210c9b16cd11d9  $RUNNER_TEMP/rowspect.patch" | sha256sum -c -
           git worktree add --detach "$RUNNER_TEMP/rowspect-candidate" c8a278bafbbd5c824d0e4edcfcbe50d2dd90135d
+          python .review/fix_browser_selector.py "$RUNNER_TEMP/rowspect-candidate" || test ! -f "$RUNNER_TEMP/rowspect-candidate/scripts/verify_browser_workflows.py"
           cd "$RUNNER_TEMP/rowspect-candidate"
           git apply --check "$RUNNER_TEMP/rowspect.patch"
           git apply "$RUNNER_TEMP/rowspect.patch"
+          python "$GITHUB_WORKSPACE/.review/fix_browser_selector.py" "$RUNNER_TEMP/rowspect-candidate"
           git diff --check
           git add app.py tests/test_baseline_worksheet.py scripts/verify_browser_workflows.py
           git -c user.name='Project qualification' -c user.email='qualification@users.noreply.github.com' commit -m 'Fix independent baseline worksheet selection and verify browser workflows'
