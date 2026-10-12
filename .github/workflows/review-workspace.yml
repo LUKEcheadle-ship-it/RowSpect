@@ -3,6 +3,7 @@ name: Public project review qualification
 on:
   push:
     branches: [review/public-project-checkouts-20261011]
+    paths: [.github/workflows/review-workspace.yml]
 
 permissions:
   contents: read
@@ -15,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: LUKEcheadle-ship-it/RowSpect
-          ref: 70cb38b1a60d7a5c683ca32ec9d4b231c46bc392
+          ref: ef12c1f210e8b0720939da529365270e89aecb65
           path: RowSpect
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -30,6 +31,16 @@ jobs:
       - name: Exercise real browser uploads and downloads
         working-directory: RowSpect
         run: python scripts/verify_browser_workflows.py --output-dir "$RUNNER_TEMP/rowspect-browser"
+      - name: Require exact clean-source browser receipt
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          receipt = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'rowspect-browser/receipt.json').read_text())
+          assert receipt['decision'] == 'PASS'
+          assert receipt['source_sha'] == 'ef12c1f210e8b0720939da529365270e89aecb65'
+          assert receipt['source_dirty'] is False
+          assert receipt['native_spreadsheet_application_checked'] is False
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: LUKEcheadle-ship-it/quietward-response
-          ref: ba81aaec66dea4b323a61b359ad5212bcbff38a6
+          ref: 972bac1be241f2701d362b6a2e471423f66f8517
           path: quietward-response
           fetch-depth: 0
           persist-credentials: false
@@ -77,7 +88,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: LUKEcheadle-ship-it/quietward-response
-          ref: ba81aaec66dea4b323a61b359ad5212bcbff38a6
+          ref: 972bac1be241f2701d362b6a2e471423f66f8517
           path: quietward-response
           persist-credentials: false
       - uses: actions/setup-python@v5
