@@ -126,10 +126,18 @@ report_html = build_html_report(profile, source_name)
 comparison = None
 if baseline_uploaded is not None:
     try:
+        baseline_bytes = baseline_uploaded.getvalue()
+        baseline_sheet_name = None
+        if Path(baseline_uploaded.name).suffix.lower() == ".xlsx":
+            baseline_sheets = get_excel_sheets(baseline_bytes)
+            baseline_sheet_name = st.sidebar.selectbox(
+                "Baseline worksheet", baseline_sheets, key="rowspect_baseline_sheet",
+                help="Choose the previous workbook's worksheet independently of the current file.",
+            )
         baseline_dataframe = load_table(
-            baseline_uploaded.getvalue(),
+            baseline_bytes,
             baseline_uploaded.name,
-            sheet_name=sheet_name,
+            sheet_name=baseline_sheet_name,
             preserve_text=preserve_text,
         )
         comparison = compare_dataframes(baseline_dataframe, dataframe)
