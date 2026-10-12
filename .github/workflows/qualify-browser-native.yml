@@ -1,0 +1,99 @@
+name: Qualify browser and native workbook workflows
+on:
+  push:
+    branches: [review/rowspect-browser-native-20261011]
+permissions:
+  contents: write
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Materialize the hash-verified candidate in a separate checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '62fd54e8739f77780a9e9559488eb787993e94ccbaa3423b91196e4859422ecf  .review/rowspect-candidate.patch.gz' | sha256sum -c -
+          gzip -dc .review/rowspect-candidate.patch.gz > "$RUNNER_TEMP/rowspect.patch"
+          echo "532a3705eb32b757afc04e6d40cebe6abf07b4738021edbe0a210c9b16cd11d9  $RUNNER_TEMP/rowspect.patch" | sha256sum -c -
+          git worktree add --detach "$RUNNER_TEMP/rowspect-candidate" c8a278bafbbd5c824d0e4edcfcbe50d2dd90135d
+          cd "$RUNNER_TEMP/rowspect-candidate"
+          git apply --check "$RUNNER_TEMP/rowspect.patch"
+          git apply "$RUNNER_TEMP/rowspect.patch"
+          git diff --check
+          git add app.py tests/test_baseline_worksheet.py scripts/verify_browser_workflows.py
+          git -c user.name='Project qualification' -c user.email='qualification@users.noreply.github.com' commit -m 'Fix independent baseline worksheet selection and verify browser workflows'
+          git rev-parse HEAD | tee "$RUNNER_TEMP/rowspect-candidate-sha.txt"
+      - name: Install application and isolated qualification tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/rowspect-candidate"
+          python -m pip install -e '.[dev]' playwright
+          python -m playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y gnumeric xvfb imagemagick
+      - name: Full automated release gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/rowspect-candidate"
+          python -m pytest -o addopts='' -q --junitxml="$RUNNER_TEMP/rowspect-tests.xml"
+          python scripts/qualify_release.py --require-ui
+      - name: Real browser upload, validation, conversion and download workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/rowspect-candidate"
+          python scripts/verify_browser_workflows.py --output-dir "$RUNNER_TEMP/rowspect-browser"
+      - name: Open exported files in the native Gnumeric engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          export EVIDENCE="$RUNNER_TEMP/rowspect-browser"
+          mkdir -p "$EVIDENCE/native"
+          for name in converted cleaned; do
+            ssconvert "$EVIDENCE/downloads/$name.xlsx" "$EVIDENCE/native/$name.xlsx"
+            ssconvert "$EVIDENCE/downloads/$name.csv" "$EVIDENCE/native/$name-csv.xlsx"
+          done
+          python - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          from openpyxl import load_workbook
+          root=pathlib.Path(os.environ['EVIDENCE'])
+          for name,rows in [('converted',4),('cleaned',3)]:
+              book=load_workbook(root/'native'/f'{name}.xlsx',data_only=False)
+              try:
+                  sheet=book.active
+                  assert sheet.max_row==rows+1
+                  assert sheet['A2'].value=='001'
+                  assert sheet['C2'].data_type!='f'
+                  assert str(sheet['C2'].value).startswith("'=")
+              finally: book.close()
+          receipt={'decision':'PASS','application':subprocess.check_output(['ssconvert','--version'],stderr=subprocess.STDOUT,text=True).strip(),'xlsx_roundtrip':'row counts, text identifiers and non-executable formula-like text preserved','csv_opening':'native import completed; CSV type inference is application-dependent','microsoft_excel_tested':False}
+          (root/'native'/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+          xvfb-run -a sh -c 'gnumeric "$1" >/tmp/rowspect-gnumeric.log 2>&1 & child=$!; sleep 4; kill -0 "$child"; import -window root "$2"; kill "$child"; wait "$child" || true' sh "$EVIDENCE/downloads/cleaned.xlsx" "$EVIDENCE/native/workbook-open.png"
+      - name: Push only the qualified source commit to a review branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/rowspect-candidate"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          test "$(git rev-parse HEAD)" = "$(cat "$RUNNER_TEMP/rowspect-candidate-sha.txt")"
+          git push origin HEAD:refs/heads/review/rowspect-qualified-20261011
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rowspect-browser-native-evidence
+          path: |
+            ${{ runner.temp }}/rowspect-browser/
+            ${{ runner.temp }}/rowspect-tests.xml
+            ${{ runner.temp }}/rowspect-candidate-sha.txt
+          retention-days: 7
+          if-no-files-found: warn
