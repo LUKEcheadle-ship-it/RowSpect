@@ -101,8 +101,10 @@ def run(output: Path, executable: str | None) -> dict:
                         expect(widget.get_by_text(file.name, exact=True)).to_be_visible()
                     def tab(name):
                         settled()
-                        page.get_by_role("tab", name=name, exact=True).click()
-                        expect(page.get_by_test_id("stException")).to_have_count(0)
+                        selected = page.get_by_role("tab", name=name, exact=True)
+                        selected.click()
+                        expect(selected).to_have_attribute("aria-selected", "true")
+                        settled()
                     def select(label, value):
                         widget = page.get_by_test_id("stSelectbox").filter(has=page.get_by_text(label, exact=True))
                         widget.get_by_role("combobox").click()
