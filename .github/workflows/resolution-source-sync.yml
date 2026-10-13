@@ -1,0 +1,42 @@
+name: Resolution source sync
+on:
+  push:
+    branches: [review/resolution-source-sync-20261013]
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: LUKEcheadle-ship-it/quietward-response
+          ref: 972bac1be241f2701d362b6a2e471423f66f8517
+          path: quietward-response
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: LUKEcheadle-ship-it/quietward
+          ref: 6f890745e0527fbea6326d0c45cb171ebc3fc8aa
+          path: quietward
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export Git objects without executing project code
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p snapshot
+          for repo in quietward-response quietward; do
+            git -C "$repo" bundle create "$GITHUB_WORKSPACE/snapshot/$repo.bundle" --all HEAD
+            git -C "$repo" bundle verify "$GITHUB_WORKSPACE/snapshot/$repo.bundle"
+          done
+          cd snapshot
+          sha256sum *.bundle > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resolution-source-snapshots
+          path: snapshot/
+          retention-days: 3
+          if-no-files-found: error
