@@ -171,7 +171,7 @@ jobs:
           test "$(git status --porcelain | wc -l)" -eq 0
           test -f $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0-py3-none-any.whl
           test -f $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0.tar.gz
-          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          (cd "$RUNNER_TEMP/rowspect-release-assets" && sha256sum -c SHA256SUMS.txt)
           python - <<'PY'
           import tomllib
           from pathlib import Path
