@@ -61,8 +61,8 @@ jobs:
       - name: Upload candidate artifacts and checksums
         uses: actions/upload-artifact@v4
         with:
-          name: rowspect-distribution-\${{ github.sha }}
-          path: \${{ runner.temp }}/rowspect-dist/*
+          name: rowspect-distribution-${{ github.sha }}
+          path: ${{ runner.temp }}/rowspect-dist/*
           retention-days: 14
           if-no-files-found: error
 
