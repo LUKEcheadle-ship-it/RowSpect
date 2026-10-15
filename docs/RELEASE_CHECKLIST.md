@@ -30,6 +30,12 @@ The entries below preserve the prior candidate record at `6018b7a5961c42040fc8c6
 
 The historical environment lacked native spreadsheet verification. The separate October 12 desktop run above supplies that evidence for the maintenance source; it does not retroactively change the historical result.
 
+## Distribution CI (candidate verification, not a release)
+
+The [distribution verification workflow](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/distribution.yml) builds a versioned wheel and source archive, records their SHA-256 hashes as short-lived Actions artifacts, installs the wheel into an isolated environment outside the checkout, exercises the real sample CLI, and builds/starts the documented non-root Docker container bound to host loopback. Every job must pass on the exact formal-release commit before it may support a publication claim. The artifacts are **not** automatically tagged, published or uploaded as a GitHub Release.
+
+A passing hosted-Ubuntu build does not certify Microsoft Excel, other target operating systems, untested spreadsheet import defaults, a human manual UI walkthrough, or production Internet exposure.
+
 ## Required for a separately selected versioned release
 
 No package or GitHub Release is created simply by completing this checklist's maintenance section. Record the intended release SHA and match its code/artifacts to the qualifying evidence. Existing checks need rerunning when affected by later source changes.
