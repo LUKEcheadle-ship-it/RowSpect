@@ -36,6 +36,14 @@ The [distribution verification workflow](https://github.com/LUKEcheadle-ship-it/
 
 A passing hosted-Ubuntu build does not certify Microsoft Excel, other target operating systems, untested spreadsheet import defaults, a human manual UI walkthrough, or production Internet exposure.
 
+## Publication authorization and immutable evidence
+
+The repository owner explicitly requested finishing and releasing outstanding public GitHub projects on **2026-10-15**. This authorizes the v1.3.0 release **only after** its exact-SHA release workflow passes strict application qualification, real browser/native spreadsheet verification, isolated installed-wheel smoke, documented Docker loopback checks, public-source audit and SHA-256 validation. Publication is automatic on a qualified `main` workflow merge; a failed check leaves v1.3.0 unpublished.
+
+The [v1.3.0 release workflow](https://github.com/LUKEcheadle-ship-it/RowSpect/actions/workflows/publish-v1.3.0.yml) provides the final revision-bound receipts. It publishes the wheel, source archive and SHA-256 digest with explicit release limitations. Until a successful workflow and visible GitHub Release exist, no checkbox below should be treated as automatically complete.
+
+Native Gnumeric (not Microsoft Excel) is the supported tested spreadsheet application, and the recorded browser coverage is automated, not a human manual walkthrough. Do not retrospectively mark the manual-history checklist below as complete.
+
 ## Required for a separately selected versioned release
 
 No package or GitHub Release is created simply by completing this checklist's maintenance section. Record the intended release SHA and match its code/artifacts to the qualifying evidence. Existing checks need rerunning when affected by later source changes.
