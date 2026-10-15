@@ -1,0 +1,102 @@
+name: Distribution verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wheel-and-sdist:
+    name: Clean install and release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build candidate wheel and source distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade build
+          mkdir -p "$RUNNER_TEMP/rowspect-dist"
+          python -m build --wheel --sdist --outdir "$RUNNER_TEMP/rowspect-dist"
+          test -f "$RUNNER_TEMP/rowspect-dist/rowspect-1.3.0-py3-none-any.whl"
+          test -f "$RUNNER_TEMP/rowspect-dist/rowspect-1.3.0.tar.gz"
+          (cd "$RUNNER_TEMP/rowspect-dist" && sha256sum rowspect-* > SHA256SUMS.txt)
+
+      - name: Test the wheel outside the source checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/rowspect-clean-venv"
+          "$RUNNER_TEMP/rowspect-clean-venv/bin/python" -m pip install "$RUNNER_TEMP/rowspect-dist/rowspect-1.3.0-py3-none-any.whl"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/rowspect-clean-venv/bin/rowspect" --doctor
+          "$RUNNER_TEMP/rowspect-clean-venv/bin/rowspect" "$GITHUB_WORKSPACE/sample_data/messy_customers.csv" --json "$RUNNER_TEMP/rowspect-sample.json"
+          "$RUNNER_TEMP/rowspect-clean-venv/bin/python" - <<'PY'
+          import json
+          import os
+          from importlib.metadata import version
+          from pathlib import Path
+          import rowspect
+
+          assert version("rowspect") == "1.3.0"
+          assert not str(Path(rowspect.__file__).resolve()).startswith(str(Path(os.environ["GITHUB_WORKSPACE"]).resolve()))
+          result = json.loads(Path(os.environ["RUNNER_TEMP"], "rowspect-sample.json").read_text())
+          assert result["rows"] == 10 and result["columns_count"] == 7
+          assert "MIT License" in Path(os.environ["GITHUB_WORKSPACE"], "LICENSE").read_text()
+          print("Clean installed wheel, sample CLI and license: PASS")
+          PY
+
+      - name: Upload candidate artifacts and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: rowspect-distribution-${{ github.sha }}
+          path: ${{ runner.temp }}/rowspect-dist/*
+          retention-days: 14
+          if-no-files-found: error
+
+  docker-loopback:
+    name: Non-root Docker loopback smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build and smoke-test documented container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -t rowspect:ci .
+          container_id="$(docker run -d --rm -p 127.0.0.1:18501:8501 rowspect:ci)"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "rowspect"
+          test "$(docker port "$container_id" 8501/tcp)" = "127.0.0.1:18501"
+          healthy=0
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error --max-time 2 http://127.0.0.1:18501/_stcore/health >/dev/null 2>&1; then
+              healthy=1
+              break
+            fi
+            if ! docker inspect --format '{{.State.Running}}' "$container_id" | grep -qx true; then
+              docker logs "$container_id"
+              break
+            fi
+            sleep 2
+          done
+          if [ "$healthy" -ne 1 ]; then
+            docker logs "$container_id"
+            exit 1
+          fi
+          echo "Docker non-root + host loopback binding + live Streamlit health: PASS"
