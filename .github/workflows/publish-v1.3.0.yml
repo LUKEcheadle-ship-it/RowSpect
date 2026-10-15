@@ -161,7 +161,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: rowspect-v1.3.0-build
-          path: release-assets
+          path: ${{ runner.temp }}/rowspect-release-assets
       - name: Recheck tag, asset digests and immutable target
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,9 +169,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git status --porcelain | wc -l)" -eq 0
-          test -f release-assets/rowspect-1.3.0-py3-none-any.whl
-          test -f release-assets/rowspect-1.3.0.tar.gz
-          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          test -f $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0-py3-none-any.whl
+          test -f $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0.tar.gz
+          (cd "$RUNNER_TEMP/rowspect-release-assets" && sha256sum -c SHA256SUMS.txt)
           python - <<'PY'
           import tomllib
           from pathlib import Path
@@ -204,9 +204,9 @@ jobs:
           Assets: install the wheel with pip, or build from the included source archive. No PyPI publication or deployed hosted service is claimed.
           NOTES
           gh release create v1.3.0 \
-            release-assets/rowspect-1.3.0-py3-none-any.whl \
-            release-assets/rowspect-1.3.0.tar.gz \
-            release-assets/SHA256SUMS.txt \
+            $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0-py3-none-any.whl \
+            $RUNNER_TEMP/rowspect-release-assets/rowspect-1.3.0.tar.gz \
+            $RUNNER_TEMP/rowspect-release-assets/SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
             --title 'RowSpect v1.3.0' \
             --notes-file "$RUNNER_TEMP/rowspect-v1.3.0-release-notes.md"
