@@ -1,0 +1,219 @@
+name: RowSpect 1.3.0 release qualification and publication
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/publish-v1.3.0.yml
+      - CHANGELOG.md
+      - docs/RELEASE_CHECKLIST.md
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v1.3.0.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rowspect-1.3.0-release
+  cancel-in-progress: false
+
+jobs:
+  browser-native:
+    name: Exact-SHA browser and native spreadsheet acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 42d839ed34689d86a8e0c945a058152704a7cd7b
+          path: native-harness
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser and native spreadsheet test dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -e './candidate[dev]' playwright
+          python -m playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gnumeric xvfb xdotool imagemagick
+      - name: Execute real Chromium CSV/XLSX and export workflows
+        run: |
+          set -euo pipefail
+          python candidate/scripts/verify_browser_workflows.py --output-dir "$RUNNER_TEMP/rowspect-browser"
+      - name: Open all four outputs in native Gnumeric
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1440x1000x24' python native-harness/review/native_workbook_check.py --browser-evidence "$RUNNER_TEMP/rowspect-browser" --output "$RUNNER_TEMP/rowspect-native"
+      - name: Bind both receipts to this exact commit
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          base = Path(os.environ['RUNNER_TEMP'])
+          browser = json.loads((base/'rowspect-browser/receipt.json').read_text())
+          native = json.loads((base/'rowspect-native/receipt.json').read_text())
+          assert browser['decision'] == native['decision'] == 'PASS'
+          assert browser['source_sha'] == native['source_sha'] == os.environ['GITHUB_SHA']
+          assert browser['source_dirty'] is False
+          assert len(native['results']) == 4
+          assert native['microsoft_excel_tested'] is False
+          print('Exact-SHA real browser and Gnumeric acceptance: PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rowspect-v1.3.0-browser-native-receipts
+          path: |
+            ${{ runner.temp }}/rowspect-browser/receipt.json
+            ${{ runner.temp }}/rowspect-native/receipt.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  distribution:
+    name: Exact-SHA release, clean wheel install, Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install qualification and build tools
+        run: python -m pip install -e './candidate[dev]' build
+      - name: Run strict application, UI, privacy and package gate
+        working-directory: candidate
+        run: python scripts/qualify_release.py --require-ui
+      - name: Build versioned wheel and source archive
+        working-directory: candidate
+        run: |
+          set -euo pipefail
+          python -m build --wheel --sdist --outdir dist
+          test -f dist/rowspect-1.3.0-py3-none-any.whl
+          test -f dist/rowspect-1.3.0.tar.gz
+          (cd dist && sha256sum rowspect-* > SHA256SUMS.txt)
+      - name: Verify clean installed wheel outside checkout
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/rowspect-venv"
+          "$RUNNER_TEMP/rowspect-venv/bin/python" -m pip install "$GITHUB_WORKSPACE/candidate/dist/rowspect-1.3.0-py3-none-any.whl"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/rowspect-venv/bin/rowspect" --doctor
+          "$RUNNER_TEMP/rowspect-venv/bin/rowspect" "$GITHUB_WORKSPACE/candidate/sample_data/messy_customers.csv" --json "$RUNNER_TEMP/rowspect-release-sample.json"
+          "$RUNNER_TEMP/rowspect-venv/bin/python" - <<'PY'
+          import json, os
+          from importlib.metadata import version
+          from pathlib import Path
+          import rowspect
+          assert version('rowspect') == '1.3.0'
+          assert not Path(rowspect.__file__).resolve().is_relative_to(Path(os.environ['GITHUB_WORKSPACE']).resolve())
+          output = json.loads(Path(os.environ['RUNNER_TEMP'], 'rowspect-release-sample.json').read_text())
+          assert output['rows'] == 10 and output['columns_count'] == 7
+          assert 'MIT License' in Path(os.environ['GITHUB_WORKSPACE'], 'candidate/LICENSE').read_text()
+          print('Installed wheel, real sample CLI, license: PASS')
+          PY
+      - name: Build and verify documented non-root loopback Docker deployment
+        run: |
+          set -euo pipefail
+          docker build -t rowspect:release ./candidate
+          cid="$(docker run -d --rm -p 127.0.0.1:18501:8501 rowspect:release)"
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          test "$(docker inspect --format '{{.Config.User}}' "$cid")" = "rowspect"
+          test "$(docker port "$cid" 8501/tcp)" = "127.0.0.1:18501"
+          ready=0
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:18501/_stcore/health >/dev/null 2>&1; then ready=1; break; fi
+            if ! docker inspect --format '{{.State.Running}}' "$cid" | grep -qx true; then break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then docker logs "$cid"; exit 1; fi
+          echo 'Real non-root Docker, loopback binding and Streamlit health: PASS'
+      - name: Preserve SHA-256-bound release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: rowspect-v1.3.0-build
+          path: candidate/dist/*
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    name: Publish qualified v1.3.0 GitHub Release
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [browser-native, distribution]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: rowspect-v1.3.0-build
+          path: release-assets
+      - name: Recheck tag, asset digests and immutable target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git status --porcelain | wc -l)" -eq 0
+          test -f release-assets/rowspect-1.3.0-py3-none-any.whl
+          test -f release-assets/rowspect-1.3.0.tar.gz
+          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          assert tomllib.loads(Path('pyproject.toml').read_text())['project']['version'] == '1.3.0'
+          assert '## 1.3.0' in Path('CHANGELOG.md').read_text()
+          assert 'MIT License' in Path('LICENSE').read_text()
+          PY
+          if gh release view v1.3.0 >/dev/null 2>&1; then
+            echo "Release v1.3.0 already exists; refusing to replace or silently amend it" >&2
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin refs/tags/v1.3.0 >/dev/null 2>&1; then
+            echo "Tag v1.3.0 exists without this release; refusing to retarget it" >&2
+            exit 1
+          fi
+      - name: Publish checked files and release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/rowspect-v1.3.0-release-notes.md" <<'NOTES'
+          RowSpect 1.3.0 is the first published versioned release of the local-first CSV/XLSX data-quality application.
+
+          Features: dataset profiling; reusable validation rules; baseline comparison; cross-column rules; strict conversion previews; safe cleanup; failing-row exports; and standalone CSV, XLSX, HTML and JSON reports.
+
+          **Release qualification:** Exact-release-commit Python tests and strict application/UI gate, clean installed-wheel CLI, distribution build, non-root loopback Docker run, real Chromium upload/download workflows and native Gnumeric opening of all four cleaned/converted CSV/XLSX files. SHA-256 checksums are attached. All tests use synthetic sample data.
+
+          **Security and limitations:** The application processes data locally; it provides no RowSpect cloud upload, login or telemetry. It is not a malware sandbox or an authenticated, Internet-facing multi-tenant application. Native Gnumeric import was tested; **Microsoft Excel was not tested**. CSV auto-import may alter padded identifiers: select text import, or prefer XLSX. Automated browser coverage is not a claim of a complete human manual walkthrough. See SECURITY.md and docs/DEPLOYMENT.md.
+
+          Assets: install the wheel with pip, or build from the included source archive. No PyPI publication or deployed hosted service is claimed.
+          NOTES
+          gh release create v1.3.0 \
+            release-assets/rowspect-1.3.0-py3-none-any.whl \
+            release-assets/rowspect-1.3.0.tar.gz \
+            release-assets/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'RowSpect v1.3.0' \
+            --notes-file "$RUNNER_TEMP/rowspect-v1.3.0-release-notes.md"
+      - name: Verify visible publication
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release view v1.3.0 --json url,tagName,isDraft,isPrerelease,assets,targetCommitish \
+            --jq '{url,tagName,isDraft,isPrerelease,targetCommitish,assets:[.assets[].name]}'

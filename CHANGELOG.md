@@ -2,7 +2,11 @@
 
 ## 1.3.0
 
-Qualified RowSpect 1.3.0 candidate; the manual XLSX walkthrough and native spreadsheet-app opening checks remain outstanding.
+RowSpect 1.3.0 includes the candidate features below, plus the October 12 maintenance repairs for independent baseline worksheet selection, exact-name worksheet `0`, and reliable Streamlit smoke cleanup.
+
+The original September release-candidate qualification lacked native spreadsheet-application proof. October 12 automated Chromium and native Gnumeric checks closed that **specific** gap for source `ef12c1f210e8b0720939da529365270e89aecb65`. Microsoft Excel and a complete human-manual walkthrough were not tested.
+
+Final versioned publication is gated on new exact-release-SHA automated Chromium upload/download, native Gnumeric CSV/XLSX import, strict qualification, clean installed wheel, source archive, and non-root Docker health checks. Release artifacts and SHA-256 digests are published only if all checks pass.
 
 ### Added
 - descriptive current CSV/XLSX versus baseline comparison with deterministic JSON output
@@ -20,6 +24,14 @@ Qualified RowSpect 1.3.0 candidate; the manual XLSX walkthrough and native sprea
 - Exact qualification gate: `python scripts/qualify_release.py --require-ui` — PASS; 107 tests passed, 0 failed, 0 skipped.
 - Compile, wheel build, public-release audit, CLI/API/CSV/XLSX/multi-sheet/rules/comparison/conversion/failing-row/cleanup/report checks, and live Streamlit UI smoke passed. The release checklist retains the manual XLSX walkthrough and native spreadsheet-app opening checks as outstanding.
 - Benchmark: 100,000 rows x 20 columns in 1.452 seconds on Windows Python 3.12.10 with pandas 2.2.3, openpyxl 3.1.5, and Streamlit 1.63.0. This is an observed run, not a performance guarantee.
+
+### October maintenance and final release verification
+
+- Correct Streamlit smoke cleanup and independent XLSX baseline selection including a worksheet named `0`.
+- Verify nine real UI tabs, synthetic uploads, rules, blocked conversions, comparisons, fresh-session profile reload, and original-input immutability.
+- Verify all four downloaded CSV/XLSX cleaned and converted files open in native Gnumeric, retaining expected row counts and formula-safety controls; XLSX identifiers remain textual.
+- Add public Python 3.11/3.12 CI, strict release qualification, isolated installed-wheel and Docker checks.
+- Restrict formal v1.3.0 publication to exact-SHA gates and attached SHA-256 distribution assets; no hosted service, PyPI package, or Microsoft Excel certification is claimed.
 
 ## 1.2.0
 
